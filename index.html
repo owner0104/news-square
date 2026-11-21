@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NEWS SQUARE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 夜のタイムズスクエア。眩しいけれど読みやすい
+   IDEA: 交差点の角に立つ2面のLEDビルボード（左=日本／右=世界）
+   PICTURE: 虹色の光線が回るLED画面に、ドット文字の見出しが打ち出される
+   COLOUR and TYPE: 夜の黒地＋日本=レッド／世界=シアン、DotGothic16 と Zen Kaku Gothic New
+   LAYOUT: 時計バー → 角ビルボード → 2段の電光テロップ → フィルタ付きニュース一覧 */
+:root{color-scheme:dark;--bg:#07070c;--panel:#11111b;--panel2:#171724;--line:#262638;--ink:#f4f2ec;--mute:#a3a1b3;--jp:#ff3b5c;--wd:#33d2ff;--amb:#ffb21e}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Zen Kaku Gothic New",system-ui,sans-serif;overflow-x:clip}
+a{color:inherit}
+.dot{font-family:"Zen Kaku Gothic New",system-ui,sans-serif;font-weight:900}
+/* 文字そのものを細かいLEDドットで描く（2pxピッチ） */
+.led{--lc:#fff;background:radial-gradient(circle,var(--lc) 0 .78px,transparent 1.02px) 0 0/2px 2px;-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent}
+.wrap{max-width:1180px;margin:0 auto;padding:0 max(4vw,14px)}
+
+/* top bar */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;padding:16px 0 10px}
+.logo{font-size:clamp(28px,4.4vw,42px);line-height:1;letter-spacing:.04em;margin:0}
+.logo b{--lc:var(--jp);font-weight:900;filter:drop-shadow(0 0 6px rgba(255,59,92,.7))}.logo i{--lc:var(--wd);font-style:normal;filter:drop-shadow(0 0 6px rgba(51,210,255,.7))}
+.clocks{display:flex;flex-wrap:wrap;gap:6px}
+.clk{background:#000;border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:13px;color:var(--mute);white-space:nowrap}
+.clk span{color:var(--amb);font-size:16px;margin-left:6px}
+
+/* billboards */
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);perspective:1500px;padding:18px 0 8px;max-width:1080px;margin:0 auto}
+.scr{position:relative;aspect-ratio:4/3;overflow:hidden;background:#000;border:6px solid #15151f;box-shadow:0 30px 80px -30px var(--glow),0 0 0 1px #2c2c3c inset}
+.scr.l{--glow:rgba(255,59,92,.55);transform:rotateY(16deg);transform-origin:right center;border-right-width:3px}
+.scr.r{--glow:rgba(51,210,255,.5);transform:rotateY(-16deg);transform-origin:left center;border-left-width:3px}
+.rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg,rgba(0,0,0,.55) 0 6deg,transparent 6deg 15deg),conic-gradient(#ff2d55,#ff8a1c,#ffe14d,#3ddc84,#2fd0ff,#7a5cff,#ff2d55);animation:spin 24s linear infinite;opacity:.8}
+.scr.r .rays{animation-direction:reverse;filter:hue-rotate(150deg)}
+.vig{position:absolute;inset:0;background:radial-gradient(ellipse 70% 65% at 50% 48%,rgba(4,4,12,.92) 0 46%,rgba(4,4,12,.55) 70%,rgba(0,0,0,.1) 100%)}
+.leds{position:absolute;inset:0;background:radial-gradient(circle,transparent 0 .7px,rgba(0,0,0,.42) 1px);background-size:2px 2px;pointer-events:none;z-index:3}
+.scan{position:absolute;left:0;right:0;height:30%;top:-30%;background:linear-gradient(transparent,rgba(255,255,255,.07),transparent);animation:scan 5s linear infinite;z-index:2;pointer-events:none}
+.face{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;padding:7% 8% 0}
+.tag{align-self:flex-start;font-size:13px;padding:3px 10px;border-radius:3px;background:var(--c);color:#000;letter-spacing:.04em}
+.scr.l .face{--c:var(--jp)}.scr.r .face{--c:var(--wd)}
+.hdw{flex:1;display:flex;align-items:center;filter:drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 1px #fff)}
+.hd{margin:0;font-size:clamp(20px,3.1vw,34px);line-height:1.38;letter-spacing:.03em;text-wrap:balance;overflow-wrap:anywhere}
+.hd .cur{animation:blink .8s steps(1) infinite}
+.meta{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:#d9d7e6;padding-bottom:8px}
+.strip{margin:0 -9%;background:var(--c);color:#000;font-size:14px;padding:6px 0;overflow:hidden;white-space:nowrap}
+.strip span{display:inline-block;padding-left:100%;animation:mq 14s linear infinite}
+.glitch .face{animation:gl .45s steps(2)}
+.ctl{position:absolute;z-index:4;inset:8px 8px auto auto;display:flex;gap:6px}
+.ctl button{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.55);color:#fff;font-size:14px;cursor:pointer}
+.pole{height:14px;max-width:1080px;margin:0 auto;background:linear-gradient(#1b1b28,#0d0d15);border-radius:0 0 8px 8px}
+
+/* tickers */
+.tick{overflow:hidden;white-space:nowrap;background:#000;border-block:1px solid var(--line);font-size:clamp(15px,2vw,19px);padding:8px 0}
+.tick+.tick{border-top:0}
+.run{display:inline-block;animation:mq var(--d,90s) linear infinite}
+.tick:hover .run{animation-play-state:paused}
+.run a{text-decoration:none;margin-right:3em}
+.run a::before{content:"◆ ";font-size:.8em}
+.tick{font-size:clamp(17px,2.2vw,21px);letter-spacing:.04em}
+.tick.jp .run{--lc:#ff5470;filter:drop-shadow(0 0 4px rgba(255,59,92,.8))}
+.tick.wd .run{--lc:#5cdcff;filter:drop-shadow(0 0 4px rgba(51,210,255,.8))}
+.tick .lb{position:sticky;left:0}
+
+/* list */
+.band{padding-block:28px 56px}
+.sec{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.sec h2{margin:0;font-size:clamp(24px,3.4vw,34px);line-height:1.1;font-weight:400}
+.note{color:var(--mute);font-size:13px;margin:4px 0 0}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button,.chip{min-height:40px;padding:0 16px;border-radius:999px;border:0;background:transparent;color:var(--mute);font:inherit;font-size:15px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:#000}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:16px}
+.chip{flex:none;border:1px solid var(--line);background:var(--panel)}
+.chip[aria-pressed=true]{border-color:var(--amb);color:var(--amb)}
+.search{flex:1 1 200px;min-height:44px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:16px;padding:0 18px}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--amb);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s,transform .2s}
+.card:hover{border-color:#3a3a55;transform:translateY(-2px)}
+.k{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mute)}
+.k .rg{display:inline-flex;align-items:center;gap:5px;color:var(--c)}
+.k .rg::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.k time{margin-left:auto;white-space:nowrap}
+.card h3{margin:0;font-size:17px;line-height:1.5;font-weight:700}
+.card p{margin:0;color:#c9c7d6;font-size:14px;line-height:1.6}
+.acts{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:4px;font-size:13px}
+.acts .src{color:var(--mute);margin-right:auto}
+.acts button,.acts a{min-height:36px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.empty{color:var(--mute);padding:30px 0;text-align:center}
+.foot{color:var(--mute);font-size:13px;border-top:1px solid var(--line);padding:18px 0 40px}
+
+.live{color:#3dff8a;filter:drop-shadow(0 0 4px #3dff8a);animation:blink 1.6s steps(1) infinite}
+.refresh{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.new{display:inline-block;font-size:11px;font-weight:900;color:#000;background:#3dff8a;border-radius:3px;padding:0 6px;margin-right:6px;vertical-align:2px}
+.card.fresh{border-color:#3dff8a55}
+.toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,140%);background:#000;border:1px solid #3dff8a;color:#3dff8a;padding:10px 18px;border-radius:999px;font-size:14px;z-index:9;transition:transform .35s;white-space:nowrap}
+.toast:not(.on){opacity:0;visibility:hidden}.toast.on{transform:translate(-50%,0)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes scan{to{top:110%}}
+@keyframes mq{to{transform:translateX(-50%)}}
+.strip span{animation-name:mq2}@keyframes mq2{to{transform:translateX(-100%)}}
+@keyframes blink{50%{opacity:0}}
+@keyframes gl{0%{clip-path:inset(10% 0 60% 0);transform:translateX(-6px);filter:hue-rotate(90deg)}50%{clip-path:inset(55% 0 5% 0);transform:translateX(6px)}100%{clip-path:none;transform:none}}
+
+@media(max-width:700px){
+  .stage{grid-template-columns:minmax(0,1fr);gap:14px;perspective:none}
+  .scr.l,.scr.r{transform:none;border-width:5px;aspect-ratio:16/11}
+  .pole{display:none}
+  .hd{font-size:clamp(18px,5.4vw,24px)}
+}
+@media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}.run{white-space:normal}.tick{white-space:normal}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 class="logo dot"><b class="led">NEWS</b> <i class="led">SQUARE</i></h1>
+    <div class="clocks" id="clocks"></div>
+  </header>
+</div>
+
+<div class="wrap">
+  <div class="stage" aria-label="ニュースビルボード">
+    <section class="scr l" id="bJ" aria-live="polite">
+      <div class="rays"></div><div class="vig"></div><div class="scan"></div>
+      <div class="face"><span class="tag dot">JAPAN 日本</span><div class="hdw"><h2 class="hd dot led"></h2></div><div class="meta dot"><span class="src"></span><span class="num"></span></div><div class="strip dot"><span></span></div></div>
+      <div class="leds"></div>
+      <div class="ctl"><button data-b="jp" data-step="-1" aria-label="前のニュース">◀</button><button data-b="jp" data-step="1" aria-label="次のニュース">▶</button></div>
+    </section>
+    <section class="scr r" id="bW" aria-live="polite">
+      <div class="rays"></div><div class="vig"></div><div class="scan"></div>
+      <div class="face"><span class="tag dot">WORLD 世界</span><div class="hdw"><h2 class="hd dot led"></h2></div><div class="meta dot"><span class="src"></span><span class="num"></span></div><div class="strip dot"><span></span></div></div>
+      <div class="leds"></div>
+      <div class="ctl"><button data-b="wd" data-step="-1" aria-label="前のニュース">◀</button><button data-b="wd" data-step="1" aria-label="次のニュース">▶</button></div>
+    </section>
+  </div>
+  <div class="pole"></div>
+</div>
+
+<div style="margin-top:22px">
+  <div class="tick jp dot"><div class="run led" id="tJ"></div></div>
+  <div class="tick wd dot"><div class="run led" id="tW"></div></div>
+</div>
+
+<main class="wrap band">
+  <div class="sec">
+    <div>
+      <h2 class="dot">ヘッドライン一覧</h2>
+      <p class="note" id="status"><span class="live">● LIVE</span> 受信準備中…</p>
+    </div>
+    <button class="refresh" id="refresh">今すぐ更新</button>
+  </div>
+  <div class="bar">
+    <div class="seg" role="group" aria-label="地域">
+      <button data-r="all" aria-pressed="true">すべて</button>
+      <button data-r="jp" aria-pressed="false">日本</button>
+      <button data-r="wd" aria-pressed="false">世界</button>
+    </div>
+    <input class="search" id="q" type="search" placeholder="キーワードで絞り込み（例：ホルムズ、APEC）" aria-label="キーワード検索">
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="カテゴリ"></div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="wrap foot">
+  出典：Google ニュース、Yahoo!ニュース、BBC の RSS。10分ごとに自動取得し、このページは1分ごとに新着を確認します。各見出しのリンクから元記事へ移動できます。
+</div>
+
+<script>
+{
+const NHK1='https://news.web.nhk/lnews/chiba/1084862721.html',NHK2='https://news.web.nhk/lnews/mito/1073207981.html';
+const SEED=[
+{r:'jp',c:'政治',d:'11/19',s:'NHK',u:NHK1,t:'APEC首脳会議、日中の接触や米中ロ首脳会談が焦点に',p:'中国・深圳で開かれたAPEC。日中首脳の接触の有無と、米中ロ3首脳の会談に注目が集まりました。'},
+{r:'jp',c:'政治',d:'11/19',s:'NHK',u:NHK1,t:'防衛費、5年間で50兆円台前半の案　安保3文書改定へ政府内で調整',p:'安全保障関連3文書の改定に向け、次期の防衛費総額をめぐる調整が進んでいます。'},
+{r:'jp',c:'経済',d:'11/19',s:'NHK',u:NHK1,t:'消費税減税をめぐり与野党の攻防続く',p:'与党は審議を積み上げての成立を、野党は自らの主張の受け入れを求めています。'},
+{r:'jp',c:'社会',d:'11/19',s:'NHK',u:NHK1,t:'受刑者の投票を一律に認めないのは違憲か　最高裁大法廷が判決へ',p:'受刑者の選挙権を一律に制限する現行制度の合憲性が問われています。'},
+{r:'jp',c:'環境',d:'11/19',s:'NHK',u:NHK1,t:'COP31閣僚級会合、笹川環境相「脱炭素の取り組みを加速」',p:'トルコで開催中の国連気候会議で、日本の環境相が演説しました。'},
+{r:'jp',c:'社会',d:'11/19',s:'NHK',u:NHK1,t:'「M9.9」誤った緊急地震速報　背景に二重のエラー、気象庁が修正',p:'誤報の原因はシステム上の二重のエラーだったと気象庁が説明しました。'},
+{r:'jp',c:'スポーツ',d:'11/19',s:'NHK',u:NHK1,t:'サッカー日本代表、森保監督の最後の試合を勝利で飾れず',p:'長く指揮を執った森保監督のラストマッチは白星とはなりませんでした。'},
+{r:'jp',c:'スポーツ',d:'11/19',s:'NHK',u:NHK1,t:'大相撲九州場所11日目　1敗の熱海富士が大関・琴櫻と対戦',p:'優勝争いを左右する一番として注目されています。'},
+{r:'jp',c:'経済',d:'11/17',s:'NHK',u:NHK2,t:'10月の貿易収支は4765億円の赤字　6か月連続',p:'赤字が半年続いています。'},
+{r:'jp',c:'政治',d:'11/17',s:'NHK',u:NHK2,t:'日米首脳が短時間懇談、インド太平洋情勢で緊密な連携を確認',p:'一連のアジア外交の場で日米首脳が言葉を交わしました。'},
+{r:'jp',c:'社会',d:'11/17',s:'NHK',u:NHK2,t:'「ニセ警察官詐欺」に生成AIの影',p:'警察官をかたる詐欺の手口に生成AIが使われている実態が浮かんでいます。'},
+{r:'jp',c:'スポーツ',d:'11/17',s:'NHK',u:NHK2,t:'大谷翔平、シルバースラッガー賞ならず　今季は「無冠」',p:'打撃のベストナインにあたる賞の受賞を逃しました。'},
+{r:'wd',c:'外交',d:'11/19',s:'SCMP',u:'https://www.scmp.com/news/china/diplomacy/article/3375124/nuclear-arms-energy-supplies-no-kim-main-takeaways-historic-apec-summit',t:'米中ロ首脳が深圳で初の3者会談　「核戦争に勝者なし」と宣言',p:'APECの場で習近平・トランプ・プーチンの3氏が会談。核リスク低減に向けた協議の継続でも一致しました。'},
+{r:'wd',c:'外交',d:'11/19',s:'AP',u:'https://www.bnnbloomberg.ca/business/international/2026/11/19/china-and-russia-say-they-and-us-agree-on-un-reforms-boosting-fuel-supplies-dialogue-on-nuclear/',t:'中ロ「米国と国連改革・燃料供給増・核対話で合意」と発表',p:'3者会談の前にはトランプ氏と習氏が今年3回目となる本格的な首脳会談を行いました。'},
+{r:'wd',c:'エネルギー',d:'11/19',s:'Drop Site',u:'https://www.dropsitenews.com/p/iran-war-oil-ansarallah-saudi-riyadh-icj-myanmar-rohingya',t:'IEA「イラン戦争は世界の石油・ガス貿易に過去最大の混乱」',p:'IEAのビロル事務局長は、エネルギーの世界はもう戦前には戻らないと述べました。'},
+{r:'wd',c:'エネルギー',d:'11/19',s:'Drop Site',u:'https://www.dropsitenews.com/p/iran-war-oil-ansarallah-saudi-riyadh-icj-myanmar-rohingya',t:'ホルムズ海峡経由の原油輸送、11月は日量約850万バレルと戦前の半分',p:'海運データ会社Kplerの集計。今後数日で持ち直す可能性もあるとしています。'},
+{r:'wd',c:'中東',d:'11/19',s:'Euronews',u:'https://www.euronews.com/2026/11/19',t:'イラク首相、親イラン武装勢力に要衝ジュルフ・アル・ナスルからの撤退を命令',p:'石油密輸の疑いと米国からの圧力が背景にあるとされます。'},
+{r:'wd',c:'欧州',d:'11/19',s:'FDD',u:'https://www.fdd.org/overnight-brief/november-19-2026/',t:'ドローン攻撃でロシアの11月の石油精製量がほぼ半減',p:'ウクライナによる製油所への攻撃が続いています。'},
+{r:'wd',c:'欧州',d:'11/18',s:'Euronews',u:'https://www.euronews.com/2026/11/18',t:'EU、ロシアの銀行・製油所・「影の船団」を狙う追加制裁へ',p:'新たな制裁パッケージが今月中にもまとまる見通しです。'},
+{r:'wd',c:'米州',d:'11/18',s:'Euronews',u:'https://www.euronews.com/2026/11/18',t:'米国防長官がカラカスを電撃訪問、ベネズエラとの軍事協力を発表',p:'このあとコロンビアも訪れ、安全保障協力を協議する予定です。'},
+{r:'wd',c:'気象',d:'11/18',s:'Euronews',u:'https://www.euronews.com/2026/11/18',t:'嵐「ブルーナ」「チャールズ」がポルトガル・マデイラに記録的な雨と風',p:'11月前半だけで最大瞬間風速や雨量の記録が複数更新されました。'},
+{r:'wd',c:'保健',d:'11/17',s:'NHK',u:NHK2,t:'WHO地域機関、アメリカのはしか「排除認定」を取り消し',p:'国内での感染の連鎖が続いたことを受けた判断です。'},
+{r:'wd',c:'外交',d:'11/17',s:'NHK',u:NHK2,t:'クアッド首脳会合、「経済的威圧」に深刻な懸念を示す共同文書',p:'日米豪印の4か国がマニラで首脳会合を開きました。'},
+{r:'wd',c:'カルチャー',d:'11/19',s:'Euronews',u:'https://www.euronews.com/2026/11/19',t:'ボージョレ・ヌーボー2026解禁　軽やかな仕上がりで業界の巻き返し狙う',p:'今年は果実味があり軽く飲みやすいヴィンテージと評されています。'}
+].map(n=>({...n,d:new Date('2026-'+n.d.replace('/','-')+'T09:00:00+09:00').toISOString()}));
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const POLL=60000;
+let N=SEED,updated=null,known=null,live=false,nextAt=Date.now();
+
+/* time helpers */
+const jst=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+const ago=iso=>{const m=Math.round((Date.now()-new Date(iso))/60000);return m<1?'たった今':m<60?m+'分前':m<1440?Math.floor(m/60)+'時間前':jst.format(new Date(iso))};
+
+/* clocks + status */
+const zones=[['TOKYO','Asia/Tokyo'],['NEW YORK','America/New_York'],['LONDON','Europe/London']];
+const clocks=document.getElementById('clocks'),status=document.getElementById('status');
+const tick=()=>{
+  clocks.innerHTML=zones.map(([n,z])=>`<div class="clk dot">${n}<span>${new Intl.DateTimeFormat('ja-JP',{timeZone:z,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date())}</span></div>`).join('');
+  const sec=Math.max(0,Math.ceil((nextAt-Date.now())/1000));
+  status.innerHTML=live?`<span class="live">● LIVE</span> ニュース取得 ${esc(ago(updated))}（${esc(jst.format(new Date(updated)))}）・次の確認まで ${sec}秒`
+    :`<span style="color:var(--amb)">● OFFLINE</span> 最新データを受信できないため、保存済みのニュースを表示中・${sec}秒後に再試行`;
+};
+setInterval(tick,1000);
+
+/* billboards */
+const boards={jp:{el:document.getElementById('bJ'),list:[],i:0},wd:{el:document.getElementById('bW'),list:[],i:0}};
+function show(key,i){
+  const b=boards[key];if(!b.list.length)return;b.i=(i+b.list.length)%b.list.length;const n=b.list[b.i],nx=b.list[(b.i+1)%b.list.length];
+  const hd=b.el.querySelector('.hd');clearInterval(b.typer);
+  b.el.classList.remove('glitch');void b.el.offsetWidth;b.el.classList.add('glitch');
+  b.el.querySelector('.src').textContent=`${n.s||'—'}｜${n.c}｜${ago(n.d)}`;
+  b.el.querySelector('.num').textContent=`${String(b.i+1).padStart(2,'0')}/${String(b.list.length).padStart(2,'0')}`;
+  b.el.querySelector('.strip span').textContent=`NEXT ▸ ${nx.t}`;
+  b.el.querySelector('.tag').textContent=(known&&n.isNew?'NEW ● ':'')+(key==='jp'?'JAPAN 日本':'WORLD 世界');
+  if(RM){hd.textContent=n.t;return}
+  let k=0;hd.innerHTML='<span></span><span class="cur">▌</span>';const sp=hd.firstChild;
+  b.typer=setInterval(()=>{sp.textContent=n.t.slice(0,++k);if(k>=n.t.length)clearInterval(b.typer)},45);
+}
+function auto(key){clearInterval(boards[key].loop);boards[key].loop=setInterval(()=>show(key,boards[key].i+1),7500)}
+document.querySelectorAll('.ctl button').forEach(btn=>btn.addEventListener('click',()=>{const k=btn.dataset.b;show(k,boards[k].i+ +btn.dataset.step);auto(k)}));
+
+/* tickers */
+const tick2={};
+function fill(id,r){
+  const list=N.filter(n=>n.r===r).slice(0,20),sig=list.map(n=>n.t).join('|');if(tick2[id]===sig)return;tick2[id]=sig;
+  const el=document.getElementById(id);const items=list.map(n=>`<a href="${esc(n.u)}" target="_blank" rel="noopener">${n.isNew&&known?'NEW ':''}${esc(n.t)}</a>`).join('');
+  el.innerHTML=items+items;el.style.setProperty('--d',Math.round(list.reduce((a,n)=>a+n.t.length,0)*0.3)+'s');
+}
+
+/* list */
+const st={r:'all',c:'すべて',q:''};
+const grid=document.getElementById('grid'),chips=document.getElementById('chips');
+function renderChips(){
+  const cats=['すべて',...new Set(N.filter(n=>st.r==='all'||n.r===st.r).map(n=>n.c))];
+  if(!cats.includes(st.c))st.c='すべて';
+  chips.innerHTML=cats.map(c=>`<button class="chip" data-c="${esc(c)}" aria-pressed="${c===st.c}">${esc(c)}</button>`).join('');
+}
+function render(){
+  const q=st.q.trim().toLowerCase();
+  const rows=N.filter(n=>(st.r==='all'||n.r===st.r)&&(st.c==='すべて'||n.c===st.c)&&(!q||(n.t+(n.p||'')+n.s+n.c).toLowerCase().includes(q)));
+  grid.innerHTML=rows.length?rows.map(n=>{const idx=N.indexOf(n);return `<article class="card${n.isNew&&known?' fresh':''}" style="--c:var(--${n.r})">
+    <div class="k"><span class="rg">${n.r==='jp'?'日本':'世界'}</span><span>${esc(n.c)}</span><time datetime="${esc(n.d)}">${esc(ago(n.d))}</time></div>
+    <h3>${n.isNew&&known?'<span class="new">NEW</span>':''}${esc(n.t)}</h3>${n.p?`<p>${esc(n.p)}</p>`:''}
+    <div class="acts"><span class="src">${esc(n.s)}</span><button data-i="${idx}">ビルボードに表示</button><a href="${esc(n.u)}" target="_blank" rel="noopener">記事 ↗</a></div></article>`}).join(''):'<p class="empty">該当するニュースがありません。条件を変えてみてください。</p>';
+}
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{st.r=b.dataset.r;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderChips();render()}));
+chips.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st.c=b.dataset.c;renderChips();render()});
+document.getElementById('q').addEventListener('input',e=>{st.q=e.target.value;render()});
+grid.addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(!b)return;const n=N[+b.dataset.i];const k=n.r;show(k,boards[k].list.indexOf(n));auto(k);boards[k].el.scrollIntoView({behavior:RM?'auto':'smooth',block:'center'})});
+
+/* apply data */
+const toast=document.createElement('div');toast.className='toast dot';document.body.append(toast);
+function apply(items,first){
+  const keys=new Set(items.map(n=>n.t));
+  const fresh=known?items.filter(n=>!known.has(n.t)):[];
+  items.forEach(n=>n.isNew=n.isNew||fresh.includes(n));
+  N=items;
+  for(const k of ['jp','wd']){
+    const b=boards[k],cur=b.list[b.i];
+    b.list=N.filter(n=>n.r===k).slice(0,15);
+    const nf=fresh.find(n=>n.r===k);
+    if(first||nf){show(k,nf?b.list.indexOf(nf):0);auto(k)}else{b.i=Math.max(0,b.list.indexOf(cur))}
+  }
+  fill('tJ','jp');fill('tW','wd');renderChips();render();
+  if(fresh.length){toast.textContent=`● 新着ニュース ${fresh.length}件`;toast.classList.add('on');setTimeout(()=>toast.classList.remove('on'),4000)}
+  known=keys;
+}
+async function load(first){
+  nextAt=Date.now()+POLL;
+  try{
+    const res=await fetch('news.json?t='+Date.now(),{cache:'no-store'});
+    if(!res.ok)throw 0;
+    const j=await res.json();if(!j.items?.length)throw 0;
+    live=true;
+    if(j.updated!==updated){updated=j.updated;apply(j.items,first)}
+  }catch(e){live=false;if(first){apply(SEED,true)}}
+  tick();
+}
+document.getElementById('refresh').addEventListener('click',()=>load(false));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()>nextAt-POLL+15000)load(false)});
+load(true);setInterval(()=>load(false),POLL);
+setInterval(()=>{for(const t of grid.querySelectorAll('time'))t.textContent=ago(t.getAttribute('datetime'))},60000);
+}
+</script>
+</body>
+</html>
