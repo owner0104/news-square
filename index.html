@@ -90,6 +90,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .k time{margin-left:auto;white-space:nowrap}
 .card h3{margin:0;font-size:17px;line-height:1.5;font-weight:700}
 .card p{margin:0;color:#c9c7d6;font-size:14px;line-height:1.6}
+.card .orig{color:var(--mute);font-size:13px;line-height:1.45}
 .acts{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:4px;font-size:13px}
 .acts .src{color:var(--mute);margin-right:auto}
 .acts button,.acts a{min-height:36px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap}
@@ -170,7 +171,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 </main>
 
 <div class="wrap foot">
-  出典：Google ニュース、Yahoo!ニュース、BBC の RSS。10分ごとに自動取得し、このページは1分ごとに新着を確認します。各見出しのリンクから元記事へ移動できます。
+  出典：Google ニュース、Yahoo!ニュース、BBC の RSS。英語の見出しは Google 翻訳による自動翻訳で、原文を下に小さく表示しています。10分ごとに自動取得し、このページは1分ごとに新着を確認します。各見出しのリンクから元記事へ移動できます。
 </div>
 
 <script>
@@ -228,7 +229,7 @@ function show(key,i){
   const b=boards[key];if(!b.list.length)return;b.i=(i+b.list.length)%b.list.length;const n=b.list[b.i],nx=b.list[(b.i+1)%b.list.length];
   const hd=b.el.querySelector('.hd');clearInterval(b.typer);
   b.el.classList.remove('glitch');void b.el.offsetWidth;b.el.classList.add('glitch');
-  b.el.querySelector('.src').textContent=`${n.s||'—'}｜${n.c}｜${ago(n.d)}`;
+  b.el.querySelector('.src').textContent=`${n.s||'—'}｜${n.c}${n.o?'｜自動翻訳':''}｜${ago(n.d)}`;
   b.el.querySelector('.num').textContent=`${String(b.i+1).padStart(2,'0')}/${String(b.list.length).padStart(2,'0')}`;
   b.el.querySelector('.strip span').textContent=`NEXT ▸ ${nx.t}`;
   b.el.querySelector('.tag').textContent=(known&&n.isNew?'NEW ● ':'')+(key==='jp'?'JAPAN 日本':'WORLD 世界');
@@ -257,10 +258,10 @@ function renderChips(){
 }
 function render(){
   const q=st.q.trim().toLowerCase();
-  const rows=N.filter(n=>(st.r==='all'||n.r===st.r)&&(st.c==='すべて'||n.c===st.c)&&(!q||(n.t+(n.p||'')+n.s+n.c).toLowerCase().includes(q)));
+  const rows=N.filter(n=>(st.r==='all'||n.r===st.r)&&(st.c==='すべて'||n.c===st.c)&&(!q||(n.t+(n.o||'')+(n.p||'')+n.s+n.c).toLowerCase().includes(q)));
   grid.innerHTML=rows.length?rows.map(n=>{const idx=N.indexOf(n);return `<article class="card${n.isNew&&known?' fresh':''}" style="--c:var(--${n.r})">
     <div class="k"><span class="rg">${n.r==='jp'?'日本':'世界'}</span><span>${esc(n.c)}</span><time datetime="${esc(n.d)}">${esc(ago(n.d))}</time></div>
-    <h3>${n.isNew&&known?'<span class="new">NEW</span>':''}${esc(n.t)}</h3>${n.p?`<p>${esc(n.p)}</p>`:''}
+    <h3>${n.isNew&&known?'<span class="new">NEW</span>':''}${esc(n.t)}</h3>${n.o?`<p class="orig" lang="en">${esc(n.o)}</p>`:''}${n.p?`<p>${esc(n.p)}</p>`:''}
     <div class="acts"><span class="src">${esc(n.s)}</span><button data-i="${idx}">ビルボードに表示</button><a href="${esc(n.u)}" target="_blank" rel="noopener">記事 ↗</a></div></article>`}).join(''):'<p class="empty">該当するニュースがありません。条件を変えてみてください。</p>';
 }
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{st.r=b.dataset.r;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderChips();render()}));

@@ -15,6 +15,34 @@ const FEEDS = [
 ];
 const PER_REGION = 60;
 
+// ---- 英語見出しの日本語訳（無料のGoogle翻訳エンドポイント。失敗時は原文のまま） ----
+const isJa = (t) => /[\u3040-\u30ff\u4e00-\u9fff]/.test(t);
+async function gtx(text) {
+  const u = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=' + encodeURIComponent(text);
+  const res = await fetch(u, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error('translate ' + res.status);
+  const j = await res.json();
+  return j[0].map((seg) => seg[0]).join('');
+}
+async function translateAll(items, cache) {
+  const need = [...new Set(items.filter((n) => !isJa(n.t) && !cache.has(n.t)).map((n) => n.t))];
+  for (let i = 0; i < need.length; i += 15) {
+    const chunk = need.slice(i, i + 15);
+    try {
+      const out = (await gtx(chunk.join('\n'))).split('\n').map((x) => x.trim());
+      if (out.length === chunk.length) chunk.forEach((t, k) => cache.set(t, out[k]));
+      else for (const t of chunk) cache.set(t, (await gtx(t)).trim());
+    } catch (e) { console.log('翻訳エラー:', e.message); break; }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  let n = 0;
+  for (const it of items) {
+    const orig = it.o || it.t;
+    if (!isJa(orig) && cache.get(orig)) { it.o = orig; it.t = cache.get(orig); n++; }
+  }
+  console.log(`翻訳: ${need.length}件を新規翻訳 / ${n}件に訳を適用`);
+}
+
 const decode = (s = '') => s
   .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
   .replace(/<[^>]+>/g, '')
@@ -48,6 +76,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const all = (await Promise.all(FEEDS.map(get))).flat();
   let prev = [];
   try { prev = JSON.parse(await readFile('news.json', 'utf8')).items || []; } catch {}
+  // 前回の訳を再利用（原文→訳）。新しく取った英語見出しは原文を o に退避して比較
+  const cache = new Map(prev.filter((n) => n.o).map((n) => [n.o, n.t]));
+  for (const n of prev) if (n.o) n.t = n.o;          // 前回分も原文に戻してから重複判定
   const seen = new Set(), out = { jp: [], wd: [] };
   for (const n of [...all, ...prev].sort((a, b) => b.d.localeCompare(a.d))) {
     const key = n.t.replace(/\s/g, '').slice(0, 40);
@@ -55,6 +86,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     seen.add(key); out[n.r].push(n);
   }
   const items = [...out.jp, ...out.wd];
+  await translateAll(items, cache);
   if (!all.length) { console.log('全フィード取得失敗。news.json は変更しません'); process.exit(0); }
   await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), items }, null, 0) + '\n');
   console.log(`news.json: 日本 ${out.jp.length} / 世界 ${out.wd.length}`);
