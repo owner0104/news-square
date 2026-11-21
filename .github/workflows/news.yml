@@ -1,7 +1,7 @@
 name: ニュース自動取得
 on:
   schedule:
-    - cron: '*/10 * * * *'   # 10分ごと（GitHubの混雑で数分遅れることがあります）
+    - cron: '*/5 * * * *'    # 5分ごと（GitHubの最短間隔。混雑で数分遅れることがあります）
   workflow_dispatch:
   push:                      # 設定やスクリプトを変えたらすぐ取得し直す
     branches: [main]

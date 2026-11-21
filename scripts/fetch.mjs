@@ -63,7 +63,8 @@ export function parse(xml, f) {
     if (s && t.endsWith(' - ' + s)) t = t.slice(0, -(s.length + 3));
     else if (!s) { const m = t.match(/^(.*) - ([^-]{1,40})$/); if (m && f.u.includes('news.google')) { t = m[1]; s = m[2]; } }
     if (!s) s = f.s || '';
-    const d = new Date(tag(x, 'pubDate') || tag(x, 'dc:date') || Date.now());
+    const raw = (tag(x, 'pubDate') || tag(x, 'dc:date') || '').replace(/^(\d{1,2}\/\d{1,2}\/\d{4}) - /, '$1 ');
+    const d = raw ? new Date(raw) : new Date();
     let u = tag(x, 'link'); if (!u) { const m = x.match(/<item[^>]*rdf:about="([^"]+)"/); if (m) u = m[1]; }
     return { r: f.r, c: f.c, t, s, u, k: f.u, d: isNaN(d) ? new Date().toISOString() : d.toISOString() };
   }).filter(n => n.t && n.u);
@@ -98,6 +99,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const items = [...out.jp, ...out.wd];
   if (CONFIG.translate !== false) await translateAll(items, cache);
   if (!all.length) { console.log('全フィード取得失敗。news.json は変更しません'); process.exit(0); }
-  await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), title: CONFIG.title, regions: CONFIG.regions, sources: [...new Set(FEEDS.map((f) => f.s || f.c))], feeds: STATUS, tr: TR, items }, null, 0) + '\n');
+  await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), title: CONFIG.title, boardCount: CONFIG.boardCount || 45, regions: CONFIG.regions, sources: [...new Set(FEEDS.map((f) => f.s || f.c))], feeds: STATUS, tr: TR, items }, null, 0) + '\n');
   console.log(`news.json: 日本 ${out.jp.length} / 世界 ${out.wd.length}`);
 }

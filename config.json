@@ -1,14 +1,54 @@
 {
   "title": "NEWS SQUARE",
   "regions": {
-    "jp": { "label": "JAPAN 日本", "short": "日本" },
-    "wd": { "label": "WORLD 世界", "short": "世界" }
+    "jp": {
+      "label": "JAPAN 日本",
+      "short": "日本"
+    },
+    "wd": {
+      "label": "WORLD 世界",
+      "short": "世界"
+    }
   },
   "translate": true,
   "perRegion": 60,
   "feeds": [
-    { "region": "jp", "category": "デジタル庁", "source": "デジタル庁", "url": "https://www.digital.go.jp/rss/news.xml" },
-    { "region": "jp", "category": "総務省",     "source": "総務省",     "url": "https://www.soumu.go.jp/news.rdf" },
-    { "region": "wd", "category": "NASA",       "source": "NASA",       "url": "https://www.nasa.gov/news-release/feed/" }
-  ]
+    {
+      "region": "jp",
+      "category": "デジタル庁",
+      "source": "デジタル庁",
+      "url": "https://www.digital.go.jp/rss/news.xml"
+    },
+    {
+      "region": "jp",
+      "category": "総務省",
+      "source": "総務省",
+      "url": "https://www.soumu.go.jp/news.rdf"
+    },
+    {
+      "region": "wd",
+      "category": "NASA",
+      "source": "NASA",
+      "url": "https://www.nasa.gov/news-release/feed/"
+    },
+    {
+      "region": "wd",
+      "category": "NASA",
+      "source": "NASA",
+      "url": "https://www.nasa.gov/feed/"
+    },
+    {
+      "region": "wd",
+      "category": "医療・科学",
+      "source": "NIH",
+      "url": "https://www.nih.gov/news-releases/feed.xml"
+    },
+    {
+      "region": "wd",
+      "category": "気象・海洋",
+      "source": "NOAA",
+      "url": "https://www.noaa.gov/rss.xml"
+    }
+  ],
+  "boardCount": 45
 }

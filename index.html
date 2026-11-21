@@ -192,6 +192,7 @@ let REG={jp:{label:'JAPAN 日本',short:'日本'},wd:{label:'WORLD 世界',short
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const POLL=60000;
+let BOARD=45;
 let N=SEED,updated=null,known=null,live=false,nextAt=Date.now();
 
 /* time helpers */
@@ -223,13 +224,14 @@ function show(key,i){
   let k=0;hd.innerHTML='<span></span><span class="cur">▌</span>';const sp=hd.firstChild;
   b.typer=setInterval(()=>{sp.textContent=n.t.slice(0,++k);if(k>=n.t.length)clearInterval(b.typer)},45);
 }
-function auto(key){clearInterval(boards[key].loop);boards[key].loop=setInterval(()=>show(key,boards[key].i+1),7500)}
+/* 1周したら最新データを取り直してから次の周へ */
+function auto(key){clearInterval(boards[key].loop);boards[key].loop=setInterval(()=>{const b=boards[key];if(b.i+1>=b.list.length)load(false);show(key,b.i+1)},7500)}
 document.querySelectorAll('.ctl button').forEach(btn=>btn.addEventListener('click',()=>{const k=btn.dataset.b;show(k,boards[k].i+ +btn.dataset.step);auto(k)}));
 
 /* tickers */
 const tick2={};
 function fill(id,r){
-  const list=N.filter(n=>n.r===r).slice(0,20),sig=list.map(n=>n.t).join('|');if(tick2[id]===sig)return;tick2[id]=sig;
+  const list=N.filter(n=>n.r===r).slice(0,BOARD),sig=list.map(n=>n.t).join('|');if(tick2[id]===sig)return;tick2[id]=sig;
   const el=document.getElementById(id);const items=list.map(n=>`<a href="${esc(n.u)}" target="_blank" rel="noopener">${n.isNew&&known?'NEW ':''}${esc(n.t)}</a>`).join('');
   el.innerHTML=items+items;el.style.setProperty('--d',Math.round(list.reduce((a,n)=>a+n.t.length,0)*0.3)+'s');
 }
@@ -264,7 +266,7 @@ function apply(items,first){
   N=items;
   for(const k of ['jp','wd']){
     const b=boards[k],cur=b.list[b.i];
-    b.list=N.filter(n=>n.r===k).slice(0,15);
+    b.list=N.filter(n=>n.r===k).slice(0,BOARD);
     const nf=fresh.find(n=>n.r===k);
     if(first||nf){show(k,nf?b.list.indexOf(nf):0);auto(k)}else{b.i=Math.max(0,b.list.indexOf(cur))}
   }
@@ -281,6 +283,7 @@ async function load(first){
     live=true;
     if(j.regions){REG={...REG,...j.regions};document.getElementById('segJ').textContent=REG.jp.short;document.getElementById('segW').textContent=REG.wd.short}
     if(j.title){document.title=j.title}
+    if(j.boardCount){BOARD=j.boardCount}
     if(j.sources){document.getElementById('foot').textContent=`出典：${j.sources.join('、')}。見出しとリンクのみを表示しています。英語の見出しは自動翻訳です。`}
     if(j.updated!==updated){updated=j.updated;apply(j.items,first)}
   }catch(e){live=false;if(first){apply(SEED,true)}}
