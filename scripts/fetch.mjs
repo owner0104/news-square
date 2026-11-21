@@ -17,6 +17,14 @@ const PER_REGION = 60;
 
 // ---- 英語見出しの日本語訳（無料のGoogle翻訳エンドポイント。失敗時は原文のまま） ----
 const isJa = (t) => /[\u3040-\u30ff\u4e00-\u9fff]/.test(t);
+const TR = { need: 0, applied: 0, errors: [] };
+async function mymemory(text) {
+  const u = 'https://api.mymemory.translated.net/get?langpair=en|ja&de=news-square@users.noreply.github.com&q=' + encodeURIComponent(text);
+  const res = await fetch(u, { signal: AbortSignal.timeout(15000) });
+  const j = await res.json();
+  if (!res.ok || j.responseStatus != 200) throw new Error('mymemory ' + (j.responseDetails || res.status));
+  return j.responseData.translatedText;
+}
 async function gtx(text) {
   const u = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=' + encodeURIComponent(text);
   const res = await fetch(u, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) });
@@ -32,7 +40,12 @@ async function translateAll(items, cache) {
       const out = (await gtx(chunk.join('\n'))).split('\n').map((x) => x.trim());
       if (out.length === chunk.length) chunk.forEach((t, k) => cache.set(t, out[k]));
       else for (const t of chunk) cache.set(t, (await gtx(t)).trim());
-    } catch (e) { console.log('翻訳エラー:', e.message); break; }
+    } catch (e) {
+      TR.errors.push(String(e.message).slice(0, 160));
+      // 予備：1件ずつ別サービスで
+      for (const t of chunk) { try { cache.set(t, (await mymemory(t)).trim()); } catch (e2) { TR.errors.push(String(e2.message).slice(0, 160)); break; } }
+      if (TR.errors.length > 6) break;
+    }
     await new Promise((r) => setTimeout(r, 400));
   }
   let n = 0;
@@ -40,7 +53,8 @@ async function translateAll(items, cache) {
     const orig = it.o || it.t;
     if (!isJa(orig) && cache.get(orig)) { it.o = orig; it.t = cache.get(orig); n++; }
   }
-  console.log(`翻訳: ${need.length}件を新規翻訳 / ${n}件に訳を適用`);
+  TR.need = need.length; TR.applied = n;
+  console.log(`翻訳: ${need.length}件を新規翻訳 / ${n}件に訳を適用`, TR.errors);
 }
 
 const decode = (s = '') => s
@@ -88,6 +102,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const items = [...out.jp, ...out.wd];
   await translateAll(items, cache);
   if (!all.length) { console.log('全フィード取得失敗。news.json は変更しません'); process.exit(0); }
-  await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), items }, null, 0) + '\n');
+  await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), tr: TR, items }, null, 0) + '\n');
   console.log(`news.json: 日本 ${out.jp.length} / 世界 ${out.wd.length}`);
 }
