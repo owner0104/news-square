@@ -71,11 +71,20 @@ export function parse(xml, f) {
   }).filter(n => n.t && n.u);
 }
 
+// 文字コードを判定して読む（Shift_JIS / EUC-JP の日本のサイトに対応）
+function decodeBody(buf, ctype = '') {
+  const head = new TextDecoder('latin1').decode(buf.slice(0, 300));
+  let enc = (head.match(/encoding=["']([\w-]+)["']/i) || [])[1] || (ctype.match(/charset=([\w-]+)/i) || [])[1] || 'utf-8';
+  enc = enc.toLowerCase();
+  if (/^(shift_jis|sjis|x-sjis|windows-31j|cp932|ms932)$/.test(enc)) enc = 'shift_jis';
+  try { return new TextDecoder(enc).decode(buf); } catch { return new TextDecoder('utf-8').decode(buf); }
+}
+
 async function get(f) {
   try {
     const res = await fetch(f.u, { headers: { 'user-agent': 'Mozilla/5.0 NewsSquareBot' }, signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(res.status);
-    const items = parse(await res.text(), f);
+    const items = parse(decodeBody(new Uint8Array(await res.arrayBuffer()), res.headers.get('content-type')), f);
     STATUS.push({ source: f.s || f.c, ok: true, count: items.length });
     console.log(`ok  ${items.length.toString().padStart(3)}  ${f.c}`);
     return items;
@@ -88,7 +97,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   try { prev = JSON.parse(await readFile('news.json', 'utf8')).items || []; } catch {}
   // 前回の訳を再利用（原文→訳）。新しく取った英語見出しは原文を o に退避して比較
   const urls = new Set(FEEDS.map((f) => f.u));
-  prev = prev.filter((n) => n.k && urls.has(n.k));
+  prev = prev.filter((n) => n.k && urls.has(n.k) && !/\uFFFD/.test((n.o || '') + n.t));
   const cache = new Map(prev.filter((n) => n.o).map((n) => [n.o, n.t]));
   for (const n of prev) if (n.o) n.t = n.o;          // 前回分も原文に戻してから重複判定
   const seen = new Set(), out = { jp: [], wd: [] };
