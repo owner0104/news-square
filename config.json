@@ -56,5 +56,53 @@
       "url": "https://www.nsf.gov/rss/rss_www_news.xml"
     }
   ],
-  "boardCount": 45
+  "boardCount": 45,
+  "extras": {
+    "wikipediaCurrentEvents": {
+      "enabled": true,
+      "days": 2,
+      "japanKeywords": [
+        "Japan",
+        "Japanese",
+        "Tokyo",
+        "Osaka",
+        "Okinawa",
+        "Takaichi"
+      ]
+    },
+    "music": [
+      {
+        "country": "jp",
+        "label": "日本",
+        "count": 25
+      },
+      {
+        "country": "us",
+        "label": "US",
+        "count": 15
+      }
+    ],
+    "weather": [
+      {
+        "name": "名古屋",
+        "lat": 35.18,
+        "lon": 136.91
+      },
+      {
+        "name": "東京",
+        "lat": 35.68,
+        "lon": 139.69
+      },
+      {
+        "name": "ニューヨーク",
+        "lat": 40.71,
+        "lon": -74.01
+      },
+      {
+        "name": "ロンドン",
+        "lat": 51.51,
+        "lon": -0.13
+      }
+    ]
+  }
 }

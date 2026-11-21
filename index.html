@@ -74,6 +74,9 @@ a{color:inherit}
 .tick{font-size:clamp(17px,2.2vw,21px);letter-spacing:.04em}
 .tick.jp .run{--lc:#ff5470;filter:drop-shadow(0 0 4px rgba(255,59,92,.8))}
 .tick.wd .run{--lc:#5cdcff;filter:drop-shadow(0 0 4px rgba(51,210,255,.8))}
+.tick.am .run{--lc:#ffc24a;filter:drop-shadow(0 0 4px rgba(255,178,30,.8))}
+.run b{font-weight:900;margin-right:3em}
+.clk em{font-style:normal;color:#d9d7e6;margin-left:8px;font-size:13px}
 .tick .lb{position:sticky;left:0}
 
 /* list */
@@ -162,6 +165,7 @@ body::before{content:"";position:fixed;left:0;right:0;top:0;height:env(safe-area
 <div style="margin-top:22px">
   <div class="tick jp dot"><div class="run led" id="tJ"></div></div>
   <div class="tick wd dot"><div class="run led" id="tW"></div></div>
+  <div class="tick am dot"><div class="run led" id="tA"></div></div>
 </div>
 
 <main class="wrap band">
@@ -202,6 +206,27 @@ let REG={jp:{label:'JAPAN 日本',short:'日本'},wd:{label:'WORLD 世界',short
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const POLL=60000;
+/* 天気（Open-Meteo：ブラウザから直接取得）と音楽ランキング */
+let WX=[],WXLIST=[],MUSIC=[];
+const WMO=c=>c===0?'快晴':c<=2?'晴れ':c===3?'くもり':c<=48?'霧':c<=57?'霧雨':c<=67?'雨':c<=77?'雪':c<=82?'にわか雨':c<=86?'にわか雪':'雷雨';
+async function loadWeather(){
+  if(!WXLIST.length)return;
+  try{
+    const q=`https://api.open-meteo.com/v1/forecast?latitude=${WXLIST.map(c=>c.lat).join(',')}&longitude=${WXLIST.map(c=>c.lon).join(',')}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=2`;
+    let j=await (await fetch(q)).json();if(!Array.isArray(j))j=[j];
+    WX=j.map((w,i)=>({name:WXLIST[i].name,now:Math.round(w.current.temperature_2m),code:w.current.weather_code,max:Math.round(w.daily.temperature_2m_max[0]),min:Math.round(w.daily.temperature_2m_min[0]),pop:w.daily.precipitation_probability_max[0],tcode:w.daily.weather_code[1],tmax:Math.round(w.daily.temperature_2m_max[1]),tmin:Math.round(w.daily.temperature_2m_min[1])}));
+    fillAm();tick();
+  }catch(e){}
+}
+setInterval(loadWeather,15*60000);
+let amSig='';
+function fillAm(){
+  const w=WX.map(x=>`${x.name} ${WMO(x.code)} ${x.now}°（最高${x.max}° 最低${x.min}° 降水${x.pop??'-'}%）あす ${WMO(x.tcode)} ${x.tmax}°/${x.tmin}°`);
+  const m=MUSIC.map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">♪ ${esc(x.label)} ${x.rank}位 ${esc(x.name)} ／ ${esc(x.artist)}</a>`);
+  const html=(w.length?`<b>WEATHER</b>`+w.map(t=>`<a>${esc(t)}</a>`).join(''):'')+(m.length?`<b>MUSIC</b>`+m.join(''):'');
+  if(!html||html===amSig)return;amSig=html;
+  const el=document.getElementById('tA');el.innerHTML=html+html;el.style.setProperty('--d',Math.round(el.textContent.length/2*0.3)+'s');
+}
 let BOARD=45;
 let N=SEED,updated=null,known=null,live=false,nextAt=Date.now();
 
@@ -210,10 +235,10 @@ const jst=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric'
 const ago=iso=>{const m=Math.round((Date.now()-new Date(iso))/60000);return m<1?'たった今':m<60?m+'分前':m<1440?Math.floor(m/60)+'時間前':jst.format(new Date(iso))};
 
 /* clocks + status */
-const zones=[['TOKYO','Asia/Tokyo'],['NEW YORK','America/New_York'],['LONDON','Europe/London']];
+const zones=[['TOKYO','Asia/Tokyo','東京'],['NEW YORK','America/New_York','ニューヨーク'],['LONDON','Europe/London','ロンドン']];
 const clocks=document.getElementById('clocks'),status=document.getElementById('status');
 const tick=()=>{
-  clocks.innerHTML=zones.map(([n,z])=>`<div class="clk dot">${n}<span>${new Intl.DateTimeFormat('ja-JP',{timeZone:z,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date())}</span></div>`).join('');
+  clocks.innerHTML=zones.map(([n,z,c])=>{const w=WX.find(x=>x.name===c);return `<div class="clk dot">${n}<span>${new Intl.DateTimeFormat('ja-JP',{timeZone:z,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date())}</span>${w?`<em>${WMO(w.code)} ${w.now}°</em>`:''}</div>`}).join('');
   const sec=Math.max(0,Math.ceil((nextAt-Date.now())/1000));
   status.innerHTML=live?`<span class="live">● LIVE</span> ニュース取得 ${esc(ago(updated))}（${esc(jst.format(new Date(updated)))}）・次の確認まで ${sec}秒`
     :`<span style="color:var(--amb)">● OFFLINE</span> 最新データを受信できないため、保存済みのニュースを表示中・${sec}秒後に再試行`;
@@ -294,7 +319,10 @@ async function load(first){
     if(j.regions){REG={...REG,...j.regions};document.getElementById('segJ').textContent=REG.jp.short;document.getElementById('segW').textContent=REG.wd.short}
     if(j.title){document.title=j.title}
     if(j.boardCount){BOARD=j.boardCount}
-    if(j.sources){document.getElementById('foot').textContent=`出典：${j.sources.join('、')}。見出しとリンクのみを表示しています。英語の見出しは自動翻訳です。`}
+    if(j.sources){document.getElementById('foot').innerHTML=`出典：${esc(j.sources.join('、'))}、<a href="https://en.wikipedia.org/wiki/Portal:Current_events" target="_blank" rel="noopener">Wikipedia Current events</a>（CC BY-SA 4.0）。天気：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Weather data by Open-Meteo.com</a>（CC BY 4.0）。音楽：Apple Music ランキング。見出しとリンクのみを表示し、英語の見出しは自動翻訳です。`}
+    if(j.music){MUSIC=j.music}
+    if(j.weather&&j.weather.length&&!WXLIST.length){WXLIST=j.weather;loadWeather()}
+    fillAm();
     if(j.updated!==updated){updated=j.updated;apply(j.items,first)}
   }catch(e){live=false;if(first){apply(SEED,true)}}
   tick();

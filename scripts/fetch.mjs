@@ -80,6 +80,60 @@ function decodeBody(buf, ctype = '') {
   try { return new TextDecoder(enc).decode(buf); } catch { return new TextDecoder('utf-8').decode(buf); }
 }
 
+
+// ---- 一般ニュース：Wikipedia「Current events」（CC BY-SA 4.0） ----
+const CAT = [[/armed|conflict|attack/i,'紛争・事件'],[/politic|election/i,'政治'],[/business|econom/i,'経済'],[/disaster|accident/i,'災害・事故'],[/science|tech/i,'科学・技術'],[/sport/i,'スポーツ'],[/art|culture/i,'文化'],[/law|crime/i,'司法・犯罪'],[/health|environment/i,'健康・環境'],[/international|relation/i,'国際関係']];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function cleanWiki(t) {
+  return t.replace(/<!--[\s\S]*?-->/g, '').replace(/<ref[\s\S]*?(<\/ref>|\/>)/g, '')
+    .replace(/\(\s*\[https?:[^\]]*\]\s*(\[https?:[^\]]*\]\s*)*\)/g, '').replace(/\[https?:\S+\s([^\]]+)\]/g, '').replace(/\[https?:\S+\]/g, '')
+    .replace(/\{\{[^{}]*\}\}/g, '').replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1').replace(/'{2,}/g, '')
+    .replace(/^[*:#\s]+/, '').replace(/\s+/g, ' ').replace(/\s+([.,])/g, '$1').trim();
+}
+async function wikipediaEvents(opt) {
+  const out = [];
+  for (let k = 0; k < (opt.days || 2); k++) {
+    const day = new Date(Date.now() - k * 864e5);
+    const title = `Portal:Current_events/${day.getUTCFullYear()}_${MONTHS[day.getUTCMonth()]}_${day.getUTCDate()}`;
+    const api = 'https://en.wikipedia.org/w/api.php?action=parse&prop=wikitext&format=json&formatversion=2&page=' + encodeURIComponent(title);
+    try {
+      const res = await fetch(api, { headers: { 'user-agent': 'NewsSquare/1.0 (https://github.com/owner0104/news-square)' }, signal: AbortSignal.timeout(15000) });
+      const j = await res.json();
+      if (!j.parse) { STATUS.push({ source: 'Wikipedia ' + title.split('/')[1], ok: false, error: 'no page yet' }); continue; }
+      let cat = 'できごと', n = 0;
+      for (const line of j.parse.wikitext.split('\n')) {
+        const h = line.match(/^'''(.+?)'''\s*$/) || line.match(/^;\s*(.+)$/);
+        if (h) { const m = CAT.find(([re]) => re.test(h[1])); cat = m ? m[1] : 'できごと'; continue; }
+        if (!/^\*/.test(line)) continue;
+        const t = cleanWiki(line);
+        if (t.length < 45 || !/[.!?]$/.test(t)) continue;
+        const jp = (opt.japanKeywords || []).some((w) => t.includes(w));
+        out.push({ r: jp ? 'jp' : 'wd', c: cat, t, s: 'Wikipedia', u: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(title).replace(/%2F/g, '/'), k: 'wikipedia', d: new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 12) - n++ * 60000).toISOString() });
+      }
+      STATUS.push({ source: 'Wikipedia ' + title.split('/')[1], ok: true, count: n });
+    } catch (e) { STATUS.push({ source: 'Wikipedia', ok: false, error: String(e.message) }); }
+  }
+  return out;
+}
+
+// ---- 音楽：Apple Music ランキング（Apple RSS Feed Generator） ----
+async function appleMusic(list) {
+  const out = [];
+  for (const m of list || []) {
+    const path = `/api/v2/${m.country}/music/most-played/${m.count || 25}/songs.json`;
+    for (const host of ['https://rss.marketingtools.apple.com', 'https://rss.applemarketingtools.com']) {
+      try {
+        const res = await fetch(host + path, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(res.status);
+        const j = await res.json();
+        j.feed.results.forEach((x, i) => out.push({ rank: i + 1, label: m.label, name: x.name, artist: x.artistName, url: x.url }));
+        STATUS.push({ source: 'Apple Music ' + m.label, ok: true, count: j.feed.results.length }); break;
+      } catch (e) { if (host.includes('applemarketingtools')) STATUS.push({ source: 'Apple Music ' + m.label, ok: false, error: String(e.message) }); }
+    }
+  }
+  return out;
+}
+
 async function get(f) {
   try {
     const res = await fetch(f.u, { headers: { 'user-agent': 'Mozilla/5.0 NewsSquareBot' }, signal: AbortSignal.timeout(15000) });
@@ -93,10 +147,13 @@ async function get(f) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const all = (await Promise.all(FEEDS.map(get))).flat();
+  const EX = CONFIG.extras || {};
+  if (EX.wikipediaCurrentEvents?.enabled) all.push(...await wikipediaEvents(EX.wikipediaCurrentEvents));
+  const music = await appleMusic(EX.music);
   let prev = [];
   try { prev = JSON.parse(await readFile('news.json', 'utf8')).items || []; } catch {}
   // 前回の訳を再利用（原文→訳）。新しく取った英語見出しは原文を o に退避して比較
-  const urls = new Set(FEEDS.map((f) => f.u));
+  const urls = new Set([...FEEDS.map((f) => f.u), 'wikipedia']);
   prev = prev.filter((n) => n.k && urls.has(n.k) && !/\uFFFD/.test((n.o || '') + n.t));
   const cache = new Map(prev.filter((n) => n.o).map((n) => [n.o, n.t]));
   for (const n of prev) if (n.o) n.t = n.o;          // 前回分も原文に戻してから重複判定
@@ -109,6 +166,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const items = [...out.jp, ...out.wd];
   if (CONFIG.translate !== false) await translateAll(items, cache);
   if (!all.length) { console.log('全フィード取得失敗。news.json は変更しません'); process.exit(0); }
-  await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), title: CONFIG.title, boardCount: CONFIG.boardCount || 45, regions: CONFIG.regions, sources: [...new Set(FEEDS.map((f) => f.s || f.c))], feeds: STATUS, tr: TR, items }, null, 0) + '\n');
+  await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), title: CONFIG.title, boardCount: CONFIG.boardCount || 45, regions: CONFIG.regions, sources: [...new Set(FEEDS.map((f) => f.s || f.c))], music, weather: EX.weather || [], feeds: STATUS, tr: TR, items }, null, 0) + '\n');
   console.log(`news.json: 日本 ${out.jp.length} / 世界 ${out.wd.length}`);
 }
