@@ -55,14 +55,15 @@ const decode = (s = '') => s
   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
   .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/&amp;/g, '&')
   .replace(/\s+/g, ' ').trim();
-const tag = (x, name) => { const m = x.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`)); return m ? decode(m[1]) : ''; };
+const tag = (x, name) => { const m = x.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`)); return m ? decode(decode(m[1])) : ''; };
 
 export function parse(xml, f) {
   return [...xml.matchAll(/<item[\s>][\s\S]*?<\/item>/g)].map(([x]) => {
     let t = tag(x, 'title'), s = tag(x, 'source');
+    const own = f.s || '';
     if (s && t.endsWith(' - ' + s)) t = t.slice(0, -(s.length + 3));
     else if (!s) { const m = t.match(/^(.*) - ([^-]{1,40})$/); if (m && f.u.includes('news.google')) { t = m[1]; s = m[2]; } }
-    if (!s) s = f.s || '';
+    if (own) s = own; else if (!s) s = '';
     const raw = (tag(x, 'pubDate') || tag(x, 'dc:date') || '').replace(/^(\d{1,2}\/\d{1,2}\/\d{4}) - /, '$1 ');
     const d = raw ? new Date(raw) : new Date();
     let u = tag(x, 'link'); if (!u) { const m = x.match(/<item[^>]*rdf:about="([^"]+)"/); if (m) u = m[1]; }

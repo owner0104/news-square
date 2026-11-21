@@ -33,12 +33,6 @@
     },
     {
       "region": "wd",
-      "category": "NASA",
-      "source": "NASA",
-      "url": "https://www.nasa.gov/feed/"
-    },
-    {
-      "region": "wd",
       "category": "医療・科学",
       "source": "NIH",
       "url": "https://www.nih.gov/news-releases/feed.xml"
@@ -48,6 +42,18 @@
       "category": "気象・海洋",
       "source": "NOAA",
       "url": "https://www.noaa.gov/rss.xml"
+    },
+    {
+      "region": "wd",
+      "category": "テクノロジー",
+      "source": "NIST",
+      "url": "https://www.nist.gov/news-events/news/rss.xml"
+    },
+    {
+      "region": "wd",
+      "category": "科学",
+      "source": "NSF",
+      "url": "https://www.nsf.gov/rss/rss_www_news.xml"
     }
   ],
   "boardCount": 45
