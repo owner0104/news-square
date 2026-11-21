@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- 検索エンジンに載せない設定。公開して検索に載せたい場合はこの行を削除 -->
+<meta name="robots" content="noindex,nofollow,noarchive">
 <title>NEWS SQUARE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -131,13 +133,13 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
   <div class="stage" aria-label="ニュースビルボード">
     <section class="scr l" id="bJ" aria-live="polite">
       <div class="rays"></div><div class="vig"></div><div class="scan"></div>
-      <div class="face"><span class="tag dot">JAPAN 日本</span><div class="hdw"><h2 class="hd dot led"></h2></div><div class="meta dot"><span class="src"></span><span class="num"></span></div><div class="strip dot"><span></span></div></div>
+      <div class="face"><span class="tag dot">JAPAN</span><div class="hdw"><h2 class="hd dot led"></h2></div><div class="meta dot"><span class="src"></span><span class="num"></span></div><div class="strip dot"><span></span></div></div>
       <div class="leds"></div>
       <div class="ctl"><button data-b="jp" data-step="-1" aria-label="前のニュース">◀</button><button data-b="jp" data-step="1" aria-label="次のニュース">▶</button></div>
     </section>
     <section class="scr r" id="bW" aria-live="polite">
       <div class="rays"></div><div class="vig"></div><div class="scan"></div>
-      <div class="face"><span class="tag dot">WORLD 世界</span><div class="hdw"><h2 class="hd dot led"></h2></div><div class="meta dot"><span class="src"></span><span class="num"></span></div><div class="strip dot"><span></span></div></div>
+      <div class="face"><span class="tag dot">WORLD</span><div class="hdw"><h2 class="hd dot led"></h2></div><div class="meta dot"><span class="src"></span><span class="num"></span></div><div class="strip dot"><span></span></div></div>
       <div class="leds"></div>
       <div class="ctl"><button data-b="wd" data-step="-1" aria-label="前のニュース">◀</button><button data-b="wd" data-step="1" aria-label="次のニュース">▶</button></div>
     </section>
@@ -161,48 +163,30 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
   <div class="bar">
     <div class="seg" role="group" aria-label="地域">
       <button data-r="all" aria-pressed="true">すべて</button>
-      <button data-r="jp" aria-pressed="false">日本</button>
-      <button data-r="wd" aria-pressed="false">世界</button>
+      <button data-r="jp" aria-pressed="false" id="segJ">日本</button>
+      <button data-r="wd" aria-pressed="false" id="segW">世界</button>
     </div>
-    <input class="search" id="q" type="search" placeholder="キーワードで絞り込み（例：ホルムズ、APEC）" aria-label="キーワード検索">
+    <input class="search" id="q" type="search" placeholder="キーワードで絞り込み" aria-label="キーワード検索">
   </div>
   <div class="chips" id="chips" role="group" aria-label="カテゴリ"></div>
   <div class="grid" id="grid"></div>
 </main>
 
-<div class="wrap foot">
-  出典：Google ニュース、Yahoo!ニュース、BBC の RSS。英語の見出しは Google 翻訳による自動翻訳で、原文を下に小さく表示しています。10分ごとに自動取得し、このページは1分ごとに新着を確認します。各見出しのリンクから元記事へ移動できます。
+<div class="wrap foot" id="foot">
+  出典は config.json で設定したフィードです。見出しとリンクのみを表示しています。
 </div>
 
 <script>
 {
-const NHK1='https://news.web.nhk/lnews/chiba/1084862721.html',NHK2='https://news.web.nhk/lnews/mito/1073207981.html';
-const SEED=[
-{r:'jp',c:'政治',d:'11/19',s:'NHK',u:NHK1,t:'APEC首脳会議、日中の接触や米中ロ首脳会談が焦点に',p:'中国・深圳で開かれたAPEC。日中首脳の接触の有無と、米中ロ3首脳の会談に注目が集まりました。'},
-{r:'jp',c:'政治',d:'11/19',s:'NHK',u:NHK1,t:'防衛費、5年間で50兆円台前半の案　安保3文書改定へ政府内で調整',p:'安全保障関連3文書の改定に向け、次期の防衛費総額をめぐる調整が進んでいます。'},
-{r:'jp',c:'経済',d:'11/19',s:'NHK',u:NHK1,t:'消費税減税をめぐり与野党の攻防続く',p:'与党は審議を積み上げての成立を、野党は自らの主張の受け入れを求めています。'},
-{r:'jp',c:'社会',d:'11/19',s:'NHK',u:NHK1,t:'受刑者の投票を一律に認めないのは違憲か　最高裁大法廷が判決へ',p:'受刑者の選挙権を一律に制限する現行制度の合憲性が問われています。'},
-{r:'jp',c:'環境',d:'11/19',s:'NHK',u:NHK1,t:'COP31閣僚級会合、笹川環境相「脱炭素の取り組みを加速」',p:'トルコで開催中の国連気候会議で、日本の環境相が演説しました。'},
-{r:'jp',c:'社会',d:'11/19',s:'NHK',u:NHK1,t:'「M9.9」誤った緊急地震速報　背景に二重のエラー、気象庁が修正',p:'誤報の原因はシステム上の二重のエラーだったと気象庁が説明しました。'},
-{r:'jp',c:'スポーツ',d:'11/19',s:'NHK',u:NHK1,t:'サッカー日本代表、森保監督の最後の試合を勝利で飾れず',p:'長く指揮を執った森保監督のラストマッチは白星とはなりませんでした。'},
-{r:'jp',c:'スポーツ',d:'11/19',s:'NHK',u:NHK1,t:'大相撲九州場所11日目　1敗の熱海富士が大関・琴櫻と対戦',p:'優勝争いを左右する一番として注目されています。'},
-{r:'jp',c:'経済',d:'11/17',s:'NHK',u:NHK2,t:'10月の貿易収支は4765億円の赤字　6か月連続',p:'赤字が半年続いています。'},
-{r:'jp',c:'政治',d:'11/17',s:'NHK',u:NHK2,t:'日米首脳が短時間懇談、インド太平洋情勢で緊密な連携を確認',p:'一連のアジア外交の場で日米首脳が言葉を交わしました。'},
-{r:'jp',c:'社会',d:'11/17',s:'NHK',u:NHK2,t:'「ニセ警察官詐欺」に生成AIの影',p:'警察官をかたる詐欺の手口に生成AIが使われている実態が浮かんでいます。'},
-{r:'jp',c:'スポーツ',d:'11/17',s:'NHK',u:NHK2,t:'大谷翔平、シルバースラッガー賞ならず　今季は「無冠」',p:'打撃のベストナインにあたる賞の受賞を逃しました。'},
-{r:'wd',c:'外交',d:'11/19',s:'SCMP',u:'https://www.scmp.com/news/china/diplomacy/article/3375124/nuclear-arms-energy-supplies-no-kim-main-takeaways-historic-apec-summit',t:'米中ロ首脳が深圳で初の3者会談　「核戦争に勝者なし」と宣言',p:'APECの場で習近平・トランプ・プーチンの3氏が会談。核リスク低減に向けた協議の継続でも一致しました。'},
-{r:'wd',c:'外交',d:'11/19',s:'AP',u:'https://www.bnnbloomberg.ca/business/international/2026/11/19/china-and-russia-say-they-and-us-agree-on-un-reforms-boosting-fuel-supplies-dialogue-on-nuclear/',t:'中ロ「米国と国連改革・燃料供給増・核対話で合意」と発表',p:'3者会談の前にはトランプ氏と習氏が今年3回目となる本格的な首脳会談を行いました。'},
-{r:'wd',c:'エネルギー',d:'11/19',s:'Drop Site',u:'https://www.dropsitenews.com/p/iran-war-oil-ansarallah-saudi-riyadh-icj-myanmar-rohingya',t:'IEA「イラン戦争は世界の石油・ガス貿易に過去最大の混乱」',p:'IEAのビロル事務局長は、エネルギーの世界はもう戦前には戻らないと述べました。'},
-{r:'wd',c:'エネルギー',d:'11/19',s:'Drop Site',u:'https://www.dropsitenews.com/p/iran-war-oil-ansarallah-saudi-riyadh-icj-myanmar-rohingya',t:'ホルムズ海峡経由の原油輸送、11月は日量約850万バレルと戦前の半分',p:'海運データ会社Kplerの集計。今後数日で持ち直す可能性もあるとしています。'},
-{r:'wd',c:'中東',d:'11/19',s:'Euronews',u:'https://www.euronews.com/2026/11/19',t:'イラク首相、親イラン武装勢力に要衝ジュルフ・アル・ナスルからの撤退を命令',p:'石油密輸の疑いと米国からの圧力が背景にあるとされます。'},
-{r:'wd',c:'欧州',d:'11/19',s:'FDD',u:'https://www.fdd.org/overnight-brief/november-19-2026/',t:'ドローン攻撃でロシアの11月の石油精製量がほぼ半減',p:'ウクライナによる製油所への攻撃が続いています。'},
-{r:'wd',c:'欧州',d:'11/18',s:'Euronews',u:'https://www.euronews.com/2026/11/18',t:'EU、ロシアの銀行・製油所・「影の船団」を狙う追加制裁へ',p:'新たな制裁パッケージが今月中にもまとまる見通しです。'},
-{r:'wd',c:'米州',d:'11/18',s:'Euronews',u:'https://www.euronews.com/2026/11/18',t:'米国防長官がカラカスを電撃訪問、ベネズエラとの軍事協力を発表',p:'このあとコロンビアも訪れ、安全保障協力を協議する予定です。'},
-{r:'wd',c:'気象',d:'11/18',s:'Euronews',u:'https://www.euronews.com/2026/11/18',t:'嵐「ブルーナ」「チャールズ」がポルトガル・マデイラに記録的な雨と風',p:'11月前半だけで最大瞬間風速や雨量の記録が複数更新されました。'},
-{r:'wd',c:'保健',d:'11/17',s:'NHK',u:NHK2,t:'WHO地域機関、アメリカのはしか「排除認定」を取り消し',p:'国内での感染の連鎖が続いたことを受けた判断です。'},
-{r:'wd',c:'外交',d:'11/17',s:'NHK',u:NHK2,t:'クアッド首脳会合、「経済的威圧」に深刻な懸念を示す共同文書',p:'日米豪印の4か国がマニラで首脳会合を開きました。'},
-{r:'wd',c:'カルチャー',d:'11/19',s:'Euronews',u:'https://www.euronews.com/2026/11/19',t:'ボージョレ・ヌーボー2026解禁　軽やかな仕上がりで業界の巻き返し狙う',p:'今年は果実味があり軽く飲みやすいヴィンテージと評されています。'}
-].map(n=>({...n,d:new Date('2026-'+n.d.replace('/','-')+'T09:00:00+09:00').toISOString()}));
+const DEMO=[
+ ['jp','はじめに','NEWS SQUARE へようこそ。ニュースを受信するとここに流れます'],
+ ['jp','使い方','config.json の feeds に好きな RSS を書くと、自分専用の電光掲示板になります'],
+ ['jp','使い方','10分ごとに GitHub Actions が新着を取得します'],
+ ['wd','About','English headlines are translated into Japanese automatically'],
+ ['wd','About','左は日本、右は世界。地域名も config.json で変えられます']
+];
+const SEED=DEMO.map(([r,c,t],i)=>({r,c,t,s:'NEWS SQUARE',u:'https://github.com/owner0104/news-square',d:new Date(Date.now()-i*60000).toISOString()}));
+let REG={jp:{label:'JAPAN 日本',short:'日本'},wd:{label:'WORLD 世界',short:'世界'}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const POLL=60000;
@@ -232,7 +216,7 @@ function show(key,i){
   b.el.querySelector('.src').textContent=`${n.s||'—'}｜${n.c}${n.o?'｜自動翻訳':''}｜${ago(n.d)}`;
   b.el.querySelector('.num').textContent=`${String(b.i+1).padStart(2,'0')}/${String(b.list.length).padStart(2,'0')}`;
   b.el.querySelector('.strip span').textContent=`NEXT ▸ ${nx.t}`;
-  b.el.querySelector('.tag').textContent=(known&&n.isNew?'NEW ● ':'')+(key==='jp'?'JAPAN 日本':'WORLD 世界');
+  b.el.querySelector('.tag').textContent=(known&&n.isNew?'NEW ● ':'')+REG[key].label;
   if(RM){hd.textContent=n.t;return}
   let k=0;hd.innerHTML='<span></span><span class="cur">▌</span>';const sp=hd.firstChild;
   b.typer=setInterval(()=>{sp.textContent=n.t.slice(0,++k);if(k>=n.t.length)clearInterval(b.typer)},45);
@@ -260,7 +244,7 @@ function render(){
   const q=st.q.trim().toLowerCase();
   const rows=N.filter(n=>(st.r==='all'||n.r===st.r)&&(st.c==='すべて'||n.c===st.c)&&(!q||(n.t+(n.o||'')+(n.p||'')+n.s+n.c).toLowerCase().includes(q)));
   grid.innerHTML=rows.length?rows.map(n=>{const idx=N.indexOf(n);return `<article class="card${n.isNew&&known?' fresh':''}" style="--c:var(--${n.r})">
-    <div class="k"><span class="rg">${n.r==='jp'?'日本':'世界'}</span><span>${esc(n.c)}</span><time datetime="${esc(n.d)}">${esc(ago(n.d))}</time></div>
+    <div class="k"><span class="rg">${esc(REG[n.r]?.short||n.r)}</span><span>${esc(n.c)}</span><time datetime="${esc(n.d)}">${esc(ago(n.d))}</time></div>
     <h3>${n.isNew&&known?'<span class="new">NEW</span>':''}${esc(n.t)}</h3>${n.o?`<p class="orig" lang="en">${esc(n.o)}</p>`:''}${n.p?`<p>${esc(n.p)}</p>`:''}
     <div class="acts"><span class="src">${esc(n.s)}</span><button data-i="${idx}">ビルボードに表示</button><a href="${esc(n.u)}" target="_blank" rel="noopener">記事 ↗</a></div></article>`}).join(''):'<p class="empty">該当するニュースがありません。条件を変えてみてください。</p>';
 }
@@ -293,6 +277,9 @@ async function load(first){
     if(!res.ok)throw 0;
     const j=await res.json();if(!j.items?.length)throw 0;
     live=true;
+    if(j.regions){REG={...REG,...j.regions};document.getElementById('segJ').textContent=REG.jp.short;document.getElementById('segW').textContent=REG.wd.short}
+    if(j.title){document.title=j.title}
+    if(j.sources){document.getElementById('foot').textContent=`出典：${j.sources.join('、')}。見出しとリンクのみを表示しています。英語の見出しは自動翻訳です。`}
     if(j.updated!==updated){updated=j.updated;apply(j.items,first)}
   }catch(e){live=false;if(first){apply(SEED,true)}}
   tick();

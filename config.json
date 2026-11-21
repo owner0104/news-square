@@ -1,0 +1,14 @@
+{
+  "title": "NEWS SQUARE",
+  "regions": {
+    "jp": { "label": "JAPAN 日本", "short": "日本" },
+    "wd": { "label": "WORLD 世界", "short": "世界" }
+  },
+  "translate": true,
+  "perRegion": 60,
+  "feeds": [
+    { "region": "jp", "category": "デジタル庁", "source": "デジタル庁", "url": "https://www.digital.go.jp/rss/news.xml" },
+    { "region": "jp", "category": "総務省",     "source": "総務省",     "url": "https://www.soumu.go.jp/news.rdf" },
+    { "region": "wd", "category": "NASA",       "source": "NASA",       "url": "https://www.nasa.gov/news-release/feed/" }
+  ]
+}

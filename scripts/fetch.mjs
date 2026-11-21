@@ -1,23 +1,15 @@
 // RSSからニュースを集めて news.json を作る（依存パッケージなし / Node 20+）
 import { writeFile, readFile } from 'node:fs/promises';
 
-const G = (t) => `https://news.google.com/rss/headlines/section/topic/${t}?hl=ja&gl=JP&ceid=JP:ja`;
-const FEEDS = [
-  { r: 'jp', c: '主要',       u: 'https://news.yahoo.co.jp/rss/topics/top-picks.xml' },
-  { r: 'jp', c: '国内',       u: G('NATION') },
-  { r: 'jp', c: '経済',       u: G('BUSINESS') },
-  { r: 'jp', c: 'テクノロジー', u: G('TECHNOLOGY') },
-  { r: 'jp', c: 'スポーツ',   u: G('SPORTS') },
-  { r: 'jp', c: 'エンタメ',   u: G('ENTERTAINMENT') },
-  { r: 'wd', c: '国際',       u: G('WORLD') },
-  { r: 'wd', c: '海外速報',   u: 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en' },
-  { r: 'wd', c: 'BBC',        u: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
-];
-const PER_REGION = 60;
+// 設定は config.json で行います（フィードの追加・削除、地域名、翻訳のオン／オフ）
+const CONFIG = JSON.parse(await readFile(new URL('../config.json', import.meta.url), 'utf8'));
+const FEEDS = CONFIG.feeds.map((f) => ({ r: f.region, c: f.category, s: f.source || '', u: f.url }));
+const PER_REGION = CONFIG.perRegion || 60;
 
 // ---- 英語見出しの日本語訳（無料のGoogle翻訳エンドポイント。失敗時は原文のまま） ----
 const isJa = (t) => /[\u3040-\u30ff\u4e00-\u9fff]/.test(t);
 const TR = { need: 0, applied: 0, errors: [] };
+const STATUS = [];
 async function mymemory(text) {
   const u = 'https://api.mymemory.translated.net/get?langpair=en|ja&de=news-square@users.noreply.github.com&q=' + encodeURIComponent(text);
   const res = await fetch(u, { signal: AbortSignal.timeout(15000) });
@@ -70,9 +62,10 @@ export function parse(xml, f) {
     let t = tag(x, 'title'), s = tag(x, 'source');
     if (s && t.endsWith(' - ' + s)) t = t.slice(0, -(s.length + 3));
     else if (!s) { const m = t.match(/^(.*) - ([^-]{1,40})$/); if (m && f.u.includes('news.google')) { t = m[1]; s = m[2]; } }
-    if (!s) s = f.u.includes('yahoo') ? 'Yahoo!ニュース' : f.u.includes('bbc') ? 'BBC' : '';
+    if (!s) s = f.s || '';
     const d = new Date(tag(x, 'pubDate') || tag(x, 'dc:date') || Date.now());
-    return { r: f.r, c: f.c, t, s, u: tag(x, 'link'), d: isNaN(d) ? new Date().toISOString() : d.toISOString() };
+    let u = tag(x, 'link'); if (!u) { const m = x.match(/<item[^>]*rdf:about="([^"]+)"/); if (m) u = m[1]; }
+    return { r: f.r, c: f.c, t, s, u, k: f.u, d: isNaN(d) ? new Date().toISOString() : d.toISOString() };
   }).filter(n => n.t && n.u);
 }
 
@@ -81,9 +74,10 @@ async function get(f) {
     const res = await fetch(f.u, { headers: { 'user-agent': 'Mozilla/5.0 NewsSquareBot' }, signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(res.status);
     const items = parse(await res.text(), f);
+    STATUS.push({ source: f.s || f.c, ok: true, count: items.length });
     console.log(`ok  ${items.length.toString().padStart(3)}  ${f.c}`);
     return items;
-  } catch (e) { console.log(`ERR ${f.c}: ${e.message}`); return []; }
+  } catch (e) { STATUS.push({ source: f.s || f.c, ok: false, error: String(e.message) }); console.log(`ERR ${f.c}: ${e.message}`); return []; }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -91,6 +85,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   let prev = [];
   try { prev = JSON.parse(await readFile('news.json', 'utf8')).items || []; } catch {}
   // 前回の訳を再利用（原文→訳）。新しく取った英語見出しは原文を o に退避して比較
+  const urls = new Set(FEEDS.map((f) => f.u));
+  prev = prev.filter((n) => n.k && urls.has(n.k));
   const cache = new Map(prev.filter((n) => n.o).map((n) => [n.o, n.t]));
   for (const n of prev) if (n.o) n.t = n.o;          // 前回分も原文に戻してから重複判定
   const seen = new Set(), out = { jp: [], wd: [] };
@@ -100,8 +96,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     seen.add(key); out[n.r].push(n);
   }
   const items = [...out.jp, ...out.wd];
-  await translateAll(items, cache);
+  if (CONFIG.translate !== false) await translateAll(items, cache);
   if (!all.length) { console.log('全フィード取得失敗。news.json は変更しません'); process.exit(0); }
-  await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), tr: TR, items }, null, 0) + '\n');
+  await writeFile('news.json', JSON.stringify({ updated: new Date().toISOString(), title: CONFIG.title, regions: CONFIG.regions, sources: [...new Set(FEEDS.map((f) => f.s || f.c))], feeds: STATUS, tr: TR, items }, null, 0) + '\n');
   console.log(`news.json: 日本 ${out.jp.length} / 世界 ${out.wd.length}`);
 }
