@@ -1,7 +1,7 @@
 # NEWS SQUARE
 
 タイムズスクエアの電光掲示板のように、ニュースを LED 風の文字で流すページです。
-好きな RSS フィードを設定すると、自分専用の電光掲示板として 5 分ごとに自動更新されます。
+好きな RSS フィードを設定すると、自分専用の電光掲示板として 約 10 分ごとに自動更新されます。
 
 - 左右 2 面のビルボード（地域ごと）と、2 段の電光テロップ
 - 新着は「NEW」付きでビルボードに即表示
@@ -13,7 +13,7 @@
 1. このページ右上の **Use this template → Create a new repository** で自分のリポジトリを作る（Public）
 2. `config.json` を開いて、`feeds` に好きな RSS の URL を書く
 3. **Settings → Pages** で Branch を `main` / `(root)` にして Save
-4. **Actions → ニュース自動取得 → Run workflow** を押す（以後は 5 分ごとに自動で動きます）
+4. **Actions → ニュース自動取得 → Run workflow** を押す（以後は 約 10 分ごとに自動で動きます）
 5. 数分後、`https://<あなたのユーザー名>.github.io/<リポジトリ名>/` を開く
 
 ## config.json

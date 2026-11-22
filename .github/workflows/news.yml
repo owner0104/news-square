@@ -1,24 +1,28 @@
 name: ニュース自動取得
+# 取得が終わるたびに「10分後にもう一度」を自分で予約して回り続けます。
+# GitHub の定時実行（schedule）は混雑時に大きく間引かれるため、1時間ごとの再開用としてだけ使います。
 on:
-  schedule:
-    - cron: '*/5 * * * *'    # 5分ごと（GitHubの最短間隔。混雑で数分遅れることがあります）
   workflow_dispatch:
-  push:                      # 設定やスクリプトを変えたらすぐ取得し直す
+  schedule:
+    - cron: '17 * * * *'
+  push:
     branches: [main]
     paths: ['config.json', 'scripts/**', '.github/workflows/news.yml']
 permissions:
   contents: write
+  actions: write
 concurrency:
-  group: news
+  group: news          # 同時に動くのは1本だけ（二重に回らない）
   cancel-in-progress: false
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: node scripts/fetch.mjs
       - name: 変更があればコミット
         run: |
@@ -26,3 +30,10 @@ jobs:
           git config user.email "news-bot@users.noreply.github.com"
           git add news.json
           git diff --cached --quiet || (git commit -m "news: $(date -u +%Y-%m-%dT%H:%MZ)" && git pull --rebase -q && git push)
+      - name: 10分後の取得を予約
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 540
+          gh workflow run news.yml --ref main
