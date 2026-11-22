@@ -57,6 +57,16 @@ const decode = (s = '') => s
   .replace(/\s+/g, ' ').trim();
 const tag = (x, name) => { const m = x.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`)); return m ? decode(decode(m[1])) : ''; };
 
+// 日付の書式ゆれに対応（RFC822 / ISO / "Thu, 11/20/2026 - 10:00" など）
+function parseDate(raw) {
+  if (!raw) return new Date();
+  let d = new Date(raw);
+  if (!isNaN(d)) return d;
+  const m = raw.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\D+(\d{1,2}):(\d{2}))?/);
+  if (m) { d = new Date(Date.UTC(+m[3], +m[1] - 1, +m[2], (+m[4] || 12) + 5, +m[5] || 0)); if (!isNaN(d)) return d; } // 米国東部時間→UTC
+  return new Date();
+}
+
 export function parse(xml, f) {
   return [...xml.matchAll(/<item[\s>][\s\S]*?<\/item>/g)].map(([x]) => {
     let t = tag(x, 'title'), s = tag(x, 'source');
@@ -64,8 +74,7 @@ export function parse(xml, f) {
     if (s && t.endsWith(' - ' + s)) t = t.slice(0, -(s.length + 3));
     else if (!s) { const m = t.match(/^(.*) - ([^-]{1,40})$/); if (m && f.u.includes('news.google')) { t = m[1]; s = m[2]; } }
     if (own) s = own; else if (!s) s = '';
-    const raw = (tag(x, 'pubDate') || tag(x, 'dc:date') || '').replace(/^(\d{1,2}\/\d{1,2}\/\d{4}) - /, '$1 ');
-    const d = raw ? new Date(raw) : new Date();
+    const d = parseDate(tag(x, 'pubDate') || tag(x, 'dc:date') || tag(x, 'updated') || tag(x, 'published'));
     let u = tag(x, 'link'); if (!u) { const m = x.match(/<item[^>]*rdf:about="([^"]+)"/); if (m) u = m[1]; }
     return { r: f.r, c: f.c, t, s, u, k: f.u, d: isNaN(d) ? new Date().toISOString() : d.toISOString() };
   }).filter(n => n.t && n.u);
@@ -108,7 +117,7 @@ async function wikipediaEvents(opt) {
         const t = cleanWiki(line);
         if (t.length < 45 || !/[.!?]$/.test(t)) continue;
         const jp = (opt.japanKeywords || []).some((w) => t.includes(w));
-        out.push({ r: jp ? 'jp' : 'wd', c: cat, t, s: 'Wikipedia', u: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(title).replace(/%2F/g, '/'), k: 'wikipedia', d: new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 12) - n++ * 60000).toISOString() });
+        out.push({ r: jp ? 'jp' : 'wd', c: cat, t, s: 'Wikipedia', u: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(title).replace(/%2F/g, '/'), k: 'wikipedia', d: new Date(Math.min(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 12), Date.now()) - n++ * 60000).toISOString() });
       }
       STATUS.push({ source: 'Wikipedia ' + title.split('/')[1], ok: true, count: n });
     } catch (e) { STATUS.push({ source: 'Wikipedia', ok: false, error: String(e.message) }); }
@@ -136,7 +145,7 @@ async function appleMusic(list) {
 
 async function get(f) {
   try {
-    const res = await fetch(f.u, { headers: { 'user-agent': 'Mozilla/5.0 NewsSquareBot' }, signal: AbortSignal.timeout(15000) });
+    const res = await fetch(f.u, { headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 NewsSquare/1.0', accept: 'application/rss+xml, application/xml;q=0.9, */*;q=0.8', 'accept-language': 'ja,en;q=0.8' }, signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(res.status);
     const items = parse(decodeBody(new Uint8Array(await res.arrayBuffer()), res.headers.get('content-type')), f);
     STATUS.push({ source: f.s || f.c, ok: true, count: items.length });
@@ -158,7 +167,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const cache = new Map(prev.filter((n) => n.o).map((n) => [n.o, n.t]));
   for (const n of prev) if (n.o) n.t = n.o;          // 前回分も原文に戻してから重複判定
   const seen = new Set(), out = { jp: [], wd: [] };
-  for (const n of [...all, ...prev].sort((a, b) => b.d.localeCompare(a.d))) {
+  // 今回取得した内容を優先（日付の修正を反映するため）、前回分は今回に無いものだけ残す
+  const keyOf = (n) => n.t.replace(/\s/g, '').slice(0, 40);
+  const fresh = new Set(all.map(keyOf));
+  const merged = [...all, ...prev.filter((n) => !fresh.has(keyOf(n)))];
+  for (const n of merged.sort((a, b) => b.d.localeCompare(a.d))) {
     const key = n.t.replace(/\s/g, '').slice(0, 40);
     if (seen.has(key) || out[n.r].length >= PER_REGION) continue;
     seen.add(key); out[n.r].push(n);
