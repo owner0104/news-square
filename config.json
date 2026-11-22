@@ -33,12 +33,6 @@
     },
     {
       "region": "wd",
-      "category": "医療・科学",
-      "source": "NIH",
-      "url": "https://www.nih.gov/news-releases/feed.xml"
-    },
-    {
-      "region": "wd",
       "category": "気象・海洋",
       "source": "NOAA",
       "url": "https://www.noaa.gov/rss.xml"
