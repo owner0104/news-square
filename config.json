@@ -11,17 +11,113 @@
     }
   },
   "translate": true,
-  "perRegion": 60,
+  "perRegion": 90,
   "feeds": [
     {
       "region": "jp",
-      "category": "デジタル庁",
+      "category": "NHK 主要",
+      "source": "NHK",
+      "url": "https://www3.nhk.or.jp/rss/news/cat0.xml"
+    },
+    {
+      "region": "jp",
+      "category": "NHK 社会",
+      "source": "NHK",
+      "url": "https://www3.nhk.or.jp/rss/news/cat1.xml"
+    },
+    {
+      "region": "jp",
+      "category": "NHK 政治",
+      "source": "NHK",
+      "url": "https://www3.nhk.or.jp/rss/news/cat4.xml"
+    },
+    {
+      "region": "jp",
+      "category": "NHK 経済",
+      "source": "NHK",
+      "url": "https://www3.nhk.or.jp/rss/news/cat5.xml"
+    },
+    {
+      "region": "jp",
+      "category": "NHK 科学・医療",
+      "source": "NHK",
+      "url": "https://www3.nhk.or.jp/rss/news/cat3.xml"
+    },
+    {
+      "region": "jp",
+      "category": "NHK スポーツ",
+      "source": "NHK",
+      "url": "https://www3.nhk.or.jp/rss/news/cat7.xml"
+    },
+    {
+      "region": "wd",
+      "category": "NHK 国際",
+      "source": "NHK",
+      "url": "https://www3.nhk.or.jp/rss/news/cat6.xml"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "首相官邸",
+      "url": "https://www.kantei.go.jp/index-jnews.rdf"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "内閣府",
+      "url": "https://www.cao.go.jp/rss/news.rdf"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "外務省",
+      "url": "https://www.mofa.go.jp/mofaj/rss/press.xml"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "厚生労働省",
+      "url": "https://www.mhlw.go.jp/stf/news.rdf"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "経済産業省",
+      "url": "https://www.meti.go.jp/ml_index_release_atom.xml"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "国土交通省",
+      "url": "https://www.mlit.go.jp/page/rss/press.xml"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "文部科学省",
+      "url": "https://www.mext.go.jp/b_menu/news/index.rdf"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "政府広報",
+      "url": "https://www.gov-online.go.jp/rss/index.xml"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
+      "source": "気象庁",
+      "url": "https://www.jma.go.jp/jma/press.rdf"
+    },
+    {
+      "region": "jp",
+      "category": "国の発表",
       "source": "デジタル庁",
       "url": "https://www.digital.go.jp/rss/news.xml"
     },
     {
       "region": "jp",
-      "category": "総務省",
+      "category": "国の発表",
       "source": "総務省",
       "url": "https://www.soumu.go.jp/news.rdf"
     },

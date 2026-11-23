@@ -68,14 +68,14 @@ function parseDate(raw) {
 }
 
 export function parse(xml, f) {
-  return [...xml.matchAll(/<item[\s>][\s\S]*?<\/item>/g)].map(([x]) => {
+  return [...xml.matchAll(/<(item|entry)[\s>][\s\S]*?<\/(item|entry)>/g)].map(([x]) => {
     let t = tag(x, 'title'), s = tag(x, 'source');
     const own = f.s || '';
     if (s && t.endsWith(' - ' + s)) t = t.slice(0, -(s.length + 3));
     else if (!s) { const m = t.match(/^(.*) - ([^-]{1,40})$/); if (m && f.u.includes('news.google')) { t = m[1]; s = m[2]; } }
     if (own) s = own; else if (!s) s = '';
     const d = parseDate(tag(x, 'pubDate') || tag(x, 'dc:date') || tag(x, 'updated') || tag(x, 'published'));
-    let u = tag(x, 'link'); if (!u) { const m = x.match(/<item[^>]*rdf:about="([^"]+)"/); if (m) u = m[1]; }
+    let u = tag(x, 'link'); if (!u) { const al = x.match(/<link[^>]*href="([^"]+)"/); if (al) u = al[1]; } if (!u) { const m = x.match(/<item[^>]*rdf:about="([^"]+)"/); if (m) u = m[1]; }
     return { r: f.r, c: f.c, t, s, u, k: f.u, d: isNaN(d) ? new Date().toISOString() : d.toISOString() };
   }).filter(n => n.t && n.u);
 }
