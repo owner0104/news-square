@@ -228,6 +228,14 @@ function fillAm(){
   const el=document.getElementById('tA');el.innerHTML=html+html;el.style.setProperty('--d',Math.round(el.textContent.length/2*0.3)+'s');
 }
 let BOARD=45;
+/* 配信元ごとに新しい順に並べ、順番に取り出して混ぜる（同じ配信元ばかり続かないように）。一般ニュースのWikipediaは1巡で3件 */
+function mix(list){
+  const g=new Map();
+  for(const n of [...list].sort((a,b)=>b.d.localeCompare(a.d))){if(!g.has(n.s))g.set(n.s,[]);g.get(n.s).push(n)}
+  const qs=[...g.values()].sort((a,b)=>b[0].d.localeCompare(a[0].d)),out=[];
+  while(qs.some(q=>q.length))for(const q of qs)for(let k=0;k<(q[0]?.s==='Wikipedia'?3:1);k++)if(q.length)out.push(q.shift());
+  return out;
+}
 let N=SEED,updated=null,known=null,live=false,nextAt=Date.now();
 
 /* time helpers */
@@ -266,7 +274,7 @@ document.querySelectorAll('.ctl button').forEach(btn=>btn.addEventListener('clic
 /* tickers */
 const tick2={};
 function fill(id,r){
-  const list=N.filter(n=>n.r===r).slice(0,BOARD),sig=list.map(n=>n.t).join('|');if(tick2[id]===sig)return;tick2[id]=sig;
+  const list=mix(N.filter(n=>n.r===r)).slice(0,BOARD),sig=list.map(n=>n.t).join('|');if(tick2[id]===sig)return;tick2[id]=sig;
   const el=document.getElementById(id);const items=list.map(n=>`<a href="${esc(n.u)}" target="_blank" rel="noopener">${n.isNew&&known?'NEW ':''}${esc(n.t)}</a>`).join('');
   el.innerHTML=items+items;el.style.setProperty('--d',Math.round(list.reduce((a,n)=>a+n.t.length,0)*0.3)+'s');
 }
@@ -301,7 +309,7 @@ function apply(items,first){
   N=items;
   for(const k of ['jp','wd']){
     const b=boards[k],cur=b.list[b.i];
-    b.list=N.filter(n=>n.r===k).slice(0,BOARD);
+    b.list=mix(N.filter(n=>n.r===k)).slice(0,BOARD);
     const nf=fresh.find(n=>n.r===k);
     if(first||nf){show(k,nf?b.list.indexOf(nf):0);auto(k)}else{b.i=Math.max(0,b.list.indexOf(cur))}
   }

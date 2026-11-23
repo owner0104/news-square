@@ -11,7 +11,7 @@
     }
   },
   "translate": true,
-  "perRegion": 90,
+  "perRegion": 150,
   "feeds": [
     {
       "region": "jp",
