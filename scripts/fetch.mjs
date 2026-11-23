@@ -148,7 +148,7 @@ async function get(f) {
     const res = await fetch(f.u, { headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 NewsSquare/1.0', accept: 'application/rss+xml, application/xml;q=0.9, */*;q=0.8', 'accept-language': 'ja,en;q=0.8' }, signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(res.status);
     const items = parse(decodeBody(new Uint8Array(await res.arrayBuffer()), res.headers.get('content-type')), f);
-    STATUS.push({ source: f.s || f.c, ok: true, count: items.length });
+    STATUS.push({ source: f.s || f.c, ok: true, count: items.length, latest: items.map((n) => n.d).sort().pop() || null, sample: items[0]?.t?.slice(0, 30) || null });
     console.log(`ok  ${items.length.toString().padStart(3)}  ${f.c}`);
     return items;
   } catch (e) { STATUS.push({ source: f.s || f.c, ok: false, error: String(e.message) }); console.log(`ERR ${f.c}: ${e.message}`); return []; }

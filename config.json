@@ -70,12 +70,6 @@
     {
       "region": "jp",
       "category": "国の発表",
-      "source": "外務省",
-      "url": "https://www.mofa.go.jp/mofaj/rss/press.xml"
-    },
-    {
-      "region": "jp",
-      "category": "国の発表",
       "source": "厚生労働省",
       "url": "https://www.mhlw.go.jp/stf/news.rdf"
     },
@@ -88,26 +82,8 @@
     {
       "region": "jp",
       "category": "国の発表",
-      "source": "国土交通省",
-      "url": "https://www.mlit.go.jp/page/rss/press.xml"
-    },
-    {
-      "region": "jp",
-      "category": "国の発表",
       "source": "文部科学省",
       "url": "https://www.mext.go.jp/b_menu/news/index.rdf"
-    },
-    {
-      "region": "jp",
-      "category": "国の発表",
-      "source": "政府広報",
-      "url": "https://www.gov-online.go.jp/rss/index.xml"
-    },
-    {
-      "region": "jp",
-      "category": "国の発表",
-      "source": "気象庁",
-      "url": "https://www.jma.go.jp/jma/press.rdf"
     },
     {
       "region": "jp",
