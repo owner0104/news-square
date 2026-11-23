@@ -143,6 +143,39 @@ async function appleMusic(list) {
   return out;
 }
 
+
+// ---- 日本の出来事：Wikipedia「2026年の日本」（日本語）/「2026 in Japan」（英語） ----
+async function wikiYearPage(opt) {
+  const out = [];
+  const year = new Date().getUTCFullYear();
+  const title = opt.lang === 'ja' ? `${year}年の日本` : `${year} in Japan`;
+  const api = `https://${opt.lang}.wikipedia.org/w/api.php?action=parse&prop=wikitext&format=json&formatversion=2&redirects=1&page=` + encodeURIComponent(title);
+  try {
+    const res = await fetch(api, { headers: { 'user-agent': 'NewsSquare/1.0 (https://github.com/owner0104/news-square)' }, signal: AbortSignal.timeout(15000) });
+    const j = await res.json();
+    if (!j.parse) { STATUS.push({ source: 'Wikipedia ' + title, ok: false, error: 'no page' }); return out; }
+    const EN = MONTHS.map((m) => m.toLowerCase());
+    let month = null, n = 0;
+    const since = Date.now() - (opt.days || 21) * 864e5;
+    for (const line of j.parse.wikitext.split('\n')) {
+      const h = line.match(/^={2,4}\s*(.+?)\s*={2,4}\s*$/);
+      if (h) { const t = cleanWiki(h[1]); const mj = t.match(/^(\d{1,2})月/); const me = EN.indexOf(t.toLowerCase()); month = mj ? +mj[1] : me >= 0 ? me + 1 : month; continue; }
+      if (!/^\*/.test(line)) continue;
+      let t = cleanWiki(line), mo = month, d = null;
+      const dj = t.match(/^(?:(\d{1,2})月)?(\d{1,2})日\s*[-–—:：]?\s*/);
+      const de = t.match(new RegExp('^(?:(' + MONTHS.join('|') + ')\\s+)?(\\d{1,2})\\s*[-–—:]\\s*', 'i'));
+      if (opt.lang === 'ja' && dj) { if (dj[1]) mo = +dj[1]; d = +dj[2]; t = t.slice(dj[0].length); }
+      else if (opt.lang !== 'ja' && de) { if (de[1]) mo = EN.indexOf(de[1].toLowerCase()) + 1; d = +de[2]; t = t.slice(de[0].length); }
+      if (!mo || !d || t.length < (opt.lang === 'ja' ? 12 : 30)) continue;
+      const ts = Date.UTC(year, mo - 1, d, 3) - n * 60000; // 日本時間の正午ごろ
+      if (ts < since || ts > Date.now() + 864e5) continue;
+      out.push({ r: 'jp', c: '日本の出来事', t, s: 'Wikipedia', u: `https://${opt.lang}.wikipedia.org/wiki/` + encodeURIComponent(title), k: 'wikipedia', d: new Date(Math.min(ts, Date.now()) - n++ * 1000).toISOString() });
+    }
+    STATUS.push({ source: 'Wikipedia ' + title, ok: true, count: n });
+  } catch (e) { STATUS.push({ source: 'Wikipedia ' + title, ok: false, error: String(e.message) }); }
+  return out;
+}
+
 async function get(f) {
   try {
     const res = await fetch(f.u, { headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 NewsSquare/1.0', accept: 'application/rss+xml, application/xml;q=0.9, */*;q=0.8', 'accept-language': 'ja,en;q=0.8' }, signal: AbortSignal.timeout(15000) });
@@ -158,6 +191,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const all = (await Promise.all(FEEDS.map(get))).flat();
   const EX = CONFIG.extras || {};
   if (EX.wikipediaCurrentEvents?.enabled) all.push(...await wikipediaEvents(EX.wikipediaCurrentEvents));
+  if (EX.wikipediaJapan?.enabled) for (const lang of EX.wikipediaJapan.langs || ['ja']) all.push(...await wikiYearPage({ ...EX.wikipediaJapan, lang }));
   const music = await appleMusic(EX.music);
   let prev = [];
   try { prev = JSON.parse(await readFile('news.json', 'utf8')).items || []; } catch {}
