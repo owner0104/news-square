@@ -15,48 +15,6 @@
   "feeds": [
     {
       "region": "jp",
-      "category": "NHK 主要",
-      "source": "NHK",
-      "url": "https://www3.nhk.or.jp/rss/news/cat0.xml"
-    },
-    {
-      "region": "jp",
-      "category": "NHK 社会",
-      "source": "NHK",
-      "url": "https://www3.nhk.or.jp/rss/news/cat1.xml"
-    },
-    {
-      "region": "jp",
-      "category": "NHK 政治",
-      "source": "NHK",
-      "url": "https://www3.nhk.or.jp/rss/news/cat4.xml"
-    },
-    {
-      "region": "jp",
-      "category": "NHK 経済",
-      "source": "NHK",
-      "url": "https://www3.nhk.or.jp/rss/news/cat5.xml"
-    },
-    {
-      "region": "jp",
-      "category": "NHK 科学・医療",
-      "source": "NHK",
-      "url": "https://www3.nhk.or.jp/rss/news/cat3.xml"
-    },
-    {
-      "region": "jp",
-      "category": "NHK スポーツ",
-      "source": "NHK",
-      "url": "https://www3.nhk.or.jp/rss/news/cat7.xml"
-    },
-    {
-      "region": "wd",
-      "category": "NHK 国際",
-      "source": "NHK",
-      "url": "https://www3.nhk.or.jp/rss/news/cat6.xml"
-    },
-    {
-      "region": "jp",
       "category": "国の発表",
       "source": "首相官邸",
       "url": "https://www.kantei.go.jp/index-jnews.rdf"
