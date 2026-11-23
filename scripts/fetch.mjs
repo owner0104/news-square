@@ -169,6 +169,7 @@ async function wikiYearPage(opt) {
       if (!mo || !d || t.length < (opt.lang === 'ja' ? 12 : 30)) continue;
       const ts = Date.UTC(year, mo - 1, d, 3) - n * 60000; // 日本時間の正午ごろ
       if (ts < since || ts > Date.now() + 864e5) continue;
+      if (/[（(]\d{4}年生まれ[）)]|\(b\. \d{4}\)/.test(t)) t = '訃報：' + t.replace(/[（(]\d{4}年生まれ[）)]/, '').replace(/、/, '（') + (t.includes('、') ? '）' : '');
       out.push({ r: 'jp', c: '日本の出来事', t, s: 'Wikipedia', u: `https://${opt.lang}.wikipedia.org/wiki/` + encodeURIComponent(title), k: 'wikipedia', d: new Date(Math.min(ts, Date.now()) - n++ * 1000).toISOString() });
     }
     STATUS.push({ source: 'Wikipedia ' + title, ok: true, count: n });
